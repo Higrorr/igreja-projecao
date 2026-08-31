@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f1115">
+  <title>Projeção · Igreja</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <link 
+    rel = "shortcut icon"
+    href = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxA0lR_u4rhebB8Y0WKOes3gWTb4dXzx-kXCBff58PuA&s=10"
+    type = "favcon">
+</head>
+<body>
+  <header class="cabecalho">
+    <h1 class="titulo">Projeção</h1>
+    <div class="status" id="status" hidden>
+      <span id="contagem"></span>
+      <button class="botao botao-secundario" id="btn-atualizar" type="button">🔄 Atualizar</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="busca">
+      <form id="form-busca" autocomplete="off">
+        <input
+          id="campo"
+          class="campo"
+          type="search"
+          inputmode="search"
+          placeholder="Bíblia, hino, playback…"
+          aria-label="Pesquisar Bíblia, Harpa ou playback"
+        >
+      </form>
+      <p class="dica">Ex.: <button type="button" class="dica-chip" data-sugestao="genesis 1">Genesis 1</button>
+        <button type="button" class="dica-chip" data-sugestao="133">Hino 133</button>
+        <button type="button" class="dica-chip" data-sugestao="no rol do livro">no rol do livro</button></p>
+    </div>
+
+    <div id="vazio" class="vazio" hidden>
+      <p>Digite para buscar um capítulo, hino ou playback.</p>
+    </div>
+
+    <div id="carregando" class="vazio" hidden>
+      <p>Buscando…</p>
+    </div>
+
+    <div id="resultados"></div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

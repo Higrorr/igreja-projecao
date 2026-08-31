@@ -1,0 +1,9 @@
+# Dependências do app (rodam no PC do projetor, embutidas no .exe)
+flask==3.1.3
+pywin32==312
+
+# Ferramentas de desenvolvimento (apenas nesta máquina):
+#   python-pptx  -> regenerar PPTX do acervo (FASE 0)
+#   pyinstaller  -> gerar o igreja.exe (build)
+python-pptx==1.0.2
+pyinstaller==6.22.2

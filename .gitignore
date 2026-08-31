@@ -1,0 +1,20 @@
+# Dados baixados (JSON das traduções) - regeneráveis pelo script
+dados/
+
+# Banco SQLite gerado em tempo de execução (criado na primeira execução)
+database/
+
+# __pycache__ do Python
+__pycache__/
+*.pyc
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Env
+.env
+
+# Artefatos do PyInstaller (intermediários de build; o igreja.exe é versionado)
+build/
+*.spec
