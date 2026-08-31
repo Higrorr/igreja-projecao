@@ -165,8 +165,15 @@ ABREV_LIVRO = {
 def procurar_livro(token: str) -> str | None:
     """
     Resolve um token digitado para um livro do acervo.
-    Prioridade: nome exato > prefixo de mesmo tamanho > prefixo > abreviatura.
-    Ex: "Jo" -> "Jo" (Jó, 42 caps); "Joao" -> "Joao" (João); "sl" -> "Salmos".
+
+    Regras:
+      1. nome exato                     ("2 reis" -> "2 Reis")
+      2. prefixo que é a fronteira do nome ("jo" -> "Jo"; "sal" -> "Salmos" se único)
+      3. prefixo com candidato único    ("gen" -> "Genesis")
+      4. abreviatura                    ("sl" -> "Salmos")
+
+    Tokens numéricos ambíguos ("2", "1") retornam None em vez de inventar um
+    livro (ex.: "2" não vira "2 Samuel" por acidente).
     """
     tok = normalizar(token)
     if not tok:
@@ -176,12 +183,13 @@ def procurar_livro(token: str) -> str | None:
             return sem
     candidatos = [sem for sem in SEM_PARA_ACENTO if normalizar(sem).startswith(tok)]
     if candidatos:
-        mesmo_tamanho = [s for s in candidatos if len(normalizar(s)) == len(tok)]
-        return (mesmo_tamanho or candidatos)[0]
-    abrev = ABREV_LIVRO.get(tok)
-    if abrev:
-        return abrev
-    return None
+        fronteira = [s for s in candidatos if len(normalizar(s)) == len(tok)]
+        if fronteira:
+            return fronteira[0]
+        if len(candidatos) == 1:
+            return candidatos[0]
+        return None  # ambíguo; deixar a resolução por prefixo mais longo decidir
+    return ABREV_LIVRO.get(tok)
 
 
 def candidatos_livro(token: str) -> list[str]:

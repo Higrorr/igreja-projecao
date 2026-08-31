@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/estilos.css">
   <link 
     rel = "shortcut icon"
-    href = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSxA0lR_u4rhebB8Y0WKOes3gWTb4dXzx-kXCBff58PuA&s=10"
+    href = "https://cdn-icons-png.flaticon.com/512/3004/3004416.png"
     type = "favcon">
 </head>
 <body>
@@ -28,24 +28,70 @@
           class="campo"
           type="search"
           inputmode="search"
-          placeholder="Bíblia, hino, playback…"
-          aria-label="Pesquisar Bíblia, Harpa ou playback"
+          placeholder="Bíblia, hino ou música…"
+          aria-label="Pesquisar"
         >
       </form>
+    </div>
+
+    <nav class="tab-bar" role="tablist" aria-label="Modo de busca">
+      <button class="aba ativa" id="tab-acervo" type="button" role="tab"
+              aria-selected="true" aria-controls="aba-acervo">📖 Acervo</button>
+      <button class="aba" id="tab-play" type="button" role="tab"
+              aria-selected="false" aria-controls="aba-play">🎤 Playbacks</button>
+    </nav>
+
+    <div id="aba-acervo" role="tabpanel" aria-labelledby="tab-acervo">
       <p class="dica">Ex.: <button type="button" class="dica-chip" data-sugestao="genesis 1">Genesis 1</button>
         <button type="button" class="dica-chip" data-sugestao="133">Hino 133</button>
         <button type="button" class="dica-chip" data-sugestao="no rol do livro">no rol do livro</button></p>
+
+      <div id="vazio" class="vazio" hidden>
+        <p>Digite para buscar um capítulo ou hino.</p>
+      </div>
+
+      <div id="carregando" class="vazio" hidden>
+        <p>Buscando…</p>
+      </div>
+
+      <div id="resultados"></div>
     </div>
 
-    <div id="vazio" class="vazio" hidden>
-      <p>Digite para buscar um capítulo, hino ou playback.</p>
-    </div>
+    <div id="aba-play" role="tabpanel" aria-labelledby="tab-play" hidden>
+      <p class="dica">Digite a música e toque em buscar (ex.: “A Ele a Glória”).</p>
 
-    <div id="carregando" class="vazio" hidden>
-      <p>Buscando…</p>
-    </div>
+      <section class="salvos">
+        <h2 class="grupo-titulo">Playbacks salvos <span class="grupo-badge" id="play-badge"></span></h2>
+        <div id="lista-play" class="item-lista"></div>
+        <div id="play-vazio" class="vazio">Nenhum playback salvo ainda.</div>
+      </section>
 
-    <div id="resultados"></div>
+      <section class="salvos">
+        <h2 class="grupo-titulo">Canais priorizados <span class="grupo-badge" id="canais-badge"></span></h2>
+        <p class="dica">Canais marcados aqui ficam no topo da busca no YouTube.</p>
+        <form id="form-canal" class="canais-form" autocomplete="off">
+          <input id="campo-canal" class="campo" type="text"
+                 placeholder="Nome do canal (ex.: Odete Playback)"
+                 aria-label="Nome do canal para priorizar">
+          <button class="botao" type="submit">Adicionar</button>
+        </form>
+        <div id="lista-canais" class="item-lista"></div>
+        <div id="canais-vazio" class="vazio">Nenhum canal priorizado.</div>
+      </section>
+
+      <div class="yt-bar">
+        <span class="dica-chip chip-toggle ativo" data-t="playback">🎵 Playback</span>
+        <span class="dica-chip chip-toggle ativo" data-t="instrumental">🎻 Instrumental</span>
+        <span class="dica-chip chip-toggle" data-t="vivo">📡 Ao vivo</span>
+        <button class="botao botao-secundario" id="btn-buscar-yt" type="button">Buscar no YouTube</button>
+      </div>
+
+      <section id="yt" class="yt" hidden>
+        <h2 class="grupo-titulo">Resultados <span class="yt-fonte" id="yt-fonte"></span></h2>
+        <div id="yt-lista" class="item-lista"></div>
+        <div id="yt-vazio" class="vazio"></div>
+      </section>
+    </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

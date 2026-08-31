@@ -79,21 +79,32 @@ def buscar(q: str, limite: int = 40) -> dict:
     resultado = {"biblia": [], "harpa": [], "playback": []}
 
     # ----- Bíblia ----------------------------------------------------
-    livro = livros.procurar_livro(tokens[0]) if tokens else None
+    # Resolver o MAIOR prefixo de tokens como nome de livro.
+    # Ex.: "2 reis 2" -> prefixo "2 reis" = 2 Reis, capítulo 2
+    #      "jo 3"     -> prefixo "jo"     = Jó,       capítulo 3
+    #      "133"      -> nenhum prefixo = livro, cai na harpa abaixo
+    livro = None
     capitulo = None
-    for t in tokens[1:]:
-        if t.isdigit():
-            capitulo = int(t)
+    token_book_end = 0  # quantos tokens o livro ocupa
+
+    for i in range(len(tokens), 0, -1):
+        nome = livros.procurar_livro(" ".join(tokens[:i]))
+        if nome:
+            livro = nome
+            token_book_end = i
             break
 
     if livro:
+        for t in tokens[token_book_end:]:
+            if t.isdigit():
+                capitulo = int(t)
+                break
         cap = capitulo if capitulo else None
         chaves = [r for r in biblia_rows if r["livro"] == livro]
         if cap is not None:
             chaves = [r for r in chaves if r["capitulo"] == cap]
         resultado["biblia"] = [_serial_biblia(r) for r in chaves[:limite]]
     elif len(tokens) == 1 and not tokens[0].isdigit():
-        # livro parcial: lista os capítulos dos candidatos para o usuário escolher
         cands = livros.candidatos_livro(tokens[0])
         if cands:
             for sem in cands:

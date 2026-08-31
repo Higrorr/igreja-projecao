@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playback</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    #player {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      border: 0;
+      background: #000;
+    }
+    #dica {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 12px;
+      text-align: center;
+      color: #fff;
+      opacity: 0.85;
+      font-size: 15px;
+      line-height: 1.4;
+      text-shadow: 0 1px 3px #000;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="player"
+    src="https://www.youtube.com/embed/{{ youtube_id }}?autoplay=1&rel=0&playsinline=1"
+    title="Playback"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+    allowfullscreen></iframe>
+  <div id="dica">Esc ou F11 sai da tela cheia</div>
+  <script>
+    setTimeout(function () {
+      var d = document.getElementById("dica");
+      if (d) d.style.opacity = "0";
+    }, 6000);
+  </script>
+</body>
+</html>

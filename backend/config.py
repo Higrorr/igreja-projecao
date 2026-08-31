@@ -31,3 +31,16 @@ DATABASE_PATH = os.path.join(DATABASE_DIR, "slides.db")
 
 # Pasta do frontend (HTML/CSS/JS) servida pelo Flask.
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# Chave da YouTube Data API v3 (search.list). Vem de backend/secrets.py
+# (arquivo embutido no exe via PyInstaller e não versionado); pode ser
+# sobrescrita por variável de ambiente YOUTUBE_API_KEY.
+_env_key = os.environ.get("YOUTUBE_API_KEY", "")
+if _env_key:
+    YOUTUBE_API_KEY = _env_key
+else:
+    try:
+        from backend import secrets as _secrets
+        YOUTUBE_API_KEY = getattr(_secrets, "YOUTUBE_API_KEY", "") or ""
+    except Exception:
+        YOUTUBE_API_KEY = ""
