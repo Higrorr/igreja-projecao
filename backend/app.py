@@ -265,6 +265,15 @@ def projecao_acao():
         return jsonify({"erro": str(e)}), 422
 
 
+@app.route("/api/projecao/primeiro_plano", methods=["POST"])
+def projecao_primeiro_plano():
+    """Traz a projeção atual (PPT ou player) para o primeiro plano/tela cheia."""
+    try:
+        return jsonify(projetor.primeiro_plano())
+    except projetor.ErroProjecao as e:
+        return jsonify({"erro": str(e)}), 422
+
+
 @app.route("/api/player/comando")
 def player_comando():
     """Comando pendente consumido pelo player (polling de play/pause)."""

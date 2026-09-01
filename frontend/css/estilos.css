@@ -601,6 +601,12 @@ main {
 }
 .controle-btn-destaque .rotulo { color: #14161c; opacity: 0.7; }
 
+.controle-btn-nafrente {
+  border-color: #3a6ea5;
+  background: rgba(58, 110, 165, 0.18);
+}
+.controle-btn-nafrente:hover { border-color: #5a9acf; }
+
 .controle-btn.preto-ativo { border-color: #888; background: var(--superficie-2); }
 .controle-btn.preto-ativo span { color: #fff; }
 

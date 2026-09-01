@@ -999,6 +999,7 @@
     var btnPause = document.getElementById("btn-player-pause");
     var iconePause = document.getElementById("icone-pause");
     var btnRecomecar = document.getElementById("btn-player-recomecar");
+    var btnPrimeiroPlano = document.getElementById("btn-primeiro-plano");
 
     function acao(payload) {
       return fetch("/api/projecao/acao", {
@@ -1059,6 +1060,20 @@
     if (btnRecomecar) {
       btnRecomecar.addEventListener("click", function () {
         acao({ acao: "recomecar" });
+      });
+    }
+    if (btnPrimeiroPlano) {
+      btnPrimeiroPlano.addEventListener("click", function () {
+        fetch("/api/projecao/primeiro_plano", { method: "POST" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) {
+              mostrarToast("Trago para frente ✓", "ok");
+            } else {
+              mostrarToast(d.erro || "Nada em projeção.", "erro");
+            }
+          })
+          .catch(function () { mostrarToast("Falha ao trazer para frente.", "erro"); });
       });
     }
 

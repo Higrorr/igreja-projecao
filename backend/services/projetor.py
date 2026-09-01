@@ -295,14 +295,29 @@ def _janela_em_tela_cheia(user32, hwnd) -> bool:
     return (r.right - r.left) >= largura - 2 and (r.bottom - r.top) >= altura - 2
 
 
+def _forcar_topo(user32, hwnd) -> None:
+    """
+    Coloca a janela realmente por cima das outras, contornando a restrição do
+    Windows que bloqueia o SetForegroundWindow vindo de processo em segundo
+    plano. HWND_TOPMOST sobe a janela no topo da ordem Z; em seguida
+    NOTOPMOST a devolve ao estado normal (topo sem ficar flutuando para sempre).
+    """
+    import time
+
+    SWP_NOSIZE = 0x0001
+    SWP_NOMOVE = 0x0002
+    flags = SWP_NOSIZE | SWP_NOMOVE
+    user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, flags)  # HWND_TOPMOST
+    time.sleep(0.05)
+    user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, flags)  # HWND_NOTOPMOST
+
+
 def _ativar_hwnd_primeiro_plano(user32, hwnd, fullscreen: bool = True) -> bool:
     """
     Desminimiza (se minimizado), traz a janela para o primeiro plano e,
     opcionalmente, garante a tela cheia (aperta F11 se não estiver). Usado
     tanto para o navegador (playback) quanto para o PowerPoint (slides).
     """
-    import time
-
     if user32.IsIconic(hwnd):
         user32.ShowWindow(hwnd, 9)  # SW_RESTORE
     if not user32.SetForegroundWindow(hwnd):
@@ -311,6 +326,7 @@ def _ativar_hwnd_primeiro_plano(user32, hwnd, fullscreen: bool = True) -> bool:
         user32.keybd_event(0x12, 0, 0, 0)  # VK_MENU pressiona e solta
         user32.keybd_event(0x12, 0, 2, 0)
         user32.SetForegroundWindow(hwnd)
+    _forcar_topo(user32, hwnd)
     time.sleep(0.3)
     if fullscreen and not _janela_em_tela_cheia(user32, hwnd):
         user32.keybd_event(0x7A, 0, 0, 0)  # VK_F11 (tela cheia no Chrome)
@@ -474,6 +490,61 @@ def acao_projecao(acao: str, host_port: str | None = None) -> dict:
         return {"ok": True, "acao": acao}
 
     raise ErroProjecao(f"Ação desconhecida: {acao}")
+
+
+def primeiro_plano() -> dict:
+    """
+    Traz a projeção atual (PowerPoint ou player) para o primeiro plano em tela
+    cheia, sob demanda — usado quando o operador nota que a tela ficou atrás de
+    outra janela no PC do projetor.
+    """
+    tipo = _controle.get("tipo")
+    from ctypes import windll
+    user32 = windll.user32
+
+    if tipo in ("player", "preto"):
+        proc = _player.get("proc")
+        if proc is None or proc.poll() is not None:
+            raise ErroProjecao("Nenhum playback em projeção.")
+        _traz_janela_pra_frente(proc.pid)
+        return {"ok": True, "tipo": tipo}
+
+    if tipo == "slide":
+        try:
+            import pythoncom
+            import win32com.client
+        except ImportError:
+            raise ErroProjecao("pywin32 não instalado neste PC.")
+        pythoncom.CoInitialize()
+        try:
+            aplicacao = win32com.client.GetActiveObject("PowerPoint.Application")
+            pres = None
+            for i in range(1, aplicacao.Presentations.Count + 1):
+                p = aplicacao.Presentations.Item(i)
+                try:
+                    if p.SlideShowWindow is not None:
+                        pres = p
+                        break
+                except Exception:
+                    continue
+            if pres is None or pres.SlideShowWindow is None:
+                raise ErroProjecao("Slideshow não está em execução.")
+            janela = _retry(lambda: pres.SlideShowWindow)
+            hwnd = _retry(lambda: janela.HWND)
+        except ErroProjecao:
+            raise
+        except Exception:
+            log.exception("Falha ao trazer o PowerPoint para o primeiro plano")
+            raise ErroProjecao("Falha ao trazer o PowerPoint para frente.")
+        finally:
+            pythoncom.CoUninitialize()
+        try:
+            _ativar_hwnd_primeiro_plano(user32, hwnd, fullscreen=False)
+        except Exception:
+            log.warning("Não consegui ativar a janela do slideshow")
+        return {"ok": True, "tipo": tipo}
+
+    raise ErroProjecao("Nada em projeção para trazer para frente.")
 
 
 def _navegar_slide(delta: int) -> None:
