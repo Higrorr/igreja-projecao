@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 import webbrowser
 from html import escape as html_escape
@@ -391,6 +392,18 @@ def _abrir_player(player_url: str) -> bool:
         return False
     _player["dir"] = pasta
     _traz_janela_pra_frente(_player["proc"].pid)
+    # A janela do navegador pode demorar a aparecer; um segundo realce, logo
+    # após o início, garante que o playback fique em primeiro plano/tela cheia
+    # de forma confiável. Roda em thread daemon para não travar a requisição.
+    def _reforcar(pid):
+        try:
+            import time
+            time.sleep(1.2)
+            _traz_janela_pra_frente(pid, timeout_s=4.0)
+        except Exception:
+            pass
+
+    threading.Thread(target=_reforcar, args=(_player["proc"].pid,), daemon=True).start()
     # Reset do comando pendente ao abrir um novo player.
     _controle["comando"] = None
     return True
