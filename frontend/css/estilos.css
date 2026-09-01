@@ -1,14 +1,15 @@
 /* ============================================================
    estilos.css — Projeção de cultos (mobile-first, tema escuro)
+   Container padronizado: largura máx 720px, gutter único 1.125rem.
    ============================================================ */
 
 :root {
-  --fundo: #0f1115;
+  --fundo: rgb(10, 10, 10);
   --superficie: #1a1e26;
   --superficie-2: #232936;
   --texto: #f2f4f8;
   --texto-suave: #9aa4b5;
-  --acento: #f2c94c;
+  --acento: #000000;
   --borda: #2c3340;
   --erro: #e5534b;
   --ok: #3fb950;
@@ -29,6 +30,13 @@ body {
   line-height: 1.45;
 }
 
+/* Container padrão: todos os painéis usam a mesma caixa centralizada. */
+main {
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 0 1.125rem 2rem;
+}
+
 /* -------- Cabeçalho -------- */
 .cabecalho {
   display: flex;
@@ -40,6 +48,8 @@ body {
   top: 0;
   z-index: 10;
   background: linear-gradient(var(--fundo) 85%, transparent);
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .titulo {
@@ -72,7 +82,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  transition: filter 0.15s ease, transform 0.05s ease;
+  transition: filter 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
   touch-action: manipulation;
 }
 
@@ -96,7 +106,7 @@ body {
 }
 
 /* -------- Busca -------- */
-.busca { padding: 0.5rem 1.125rem 0.25rem; }
+.busca { padding: 0.5rem 0 0.25rem; }
 
 .campo {
   width: 100%;
@@ -118,7 +128,7 @@ body {
 .campo::placeholder { color: var(--texto-suave); }
 
 .dica {
-  margin: 0.5rem 0 0;
+  margin: 0.625rem 0 0;
   color: var(--texto-suave);
   font-size: 0.85rem;
   display: flex;
@@ -146,7 +156,7 @@ body {
 .grupo { margin: 1.125rem 0; }
 
 .grupo-titulo {
-  margin: 0 1.125rem 0.5rem;
+  margin: 0 0 0.5rem;
   font-size: clamp(0.85rem, 2vw, 0.95rem);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -160,7 +170,7 @@ body {
   letter-spacing: 0;
 }
 
-.item-lista { padding: 0 0.75rem; }
+.item-lista { display: flex; flex-direction: column; }
 
 /* -------- Cards (resultados) -------- */
 .card {
@@ -177,7 +187,7 @@ body {
   cursor: pointer;
   min-height: 60px;
   touch-action: manipulation;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:hover { border-color: var(--acento); }
@@ -216,11 +226,12 @@ body {
 .vazio {
   text-align: center;
   color: var(--texto-suave);
-  padding: 3rem 1.25rem;
+  padding: 2.25rem 0.5rem;
+  font-size: 0.95rem;
 }
 
 /* -------- Painel de playbacks -------- */
-.painel-play { padding: 0.5rem 1.125rem 0.25rem; }
+.painel-play { padding: 0.5rem 0 0.25rem; }
 
 .painel-play form {
   display: flex;
@@ -272,6 +283,7 @@ body {
   min-width: 40px;
   cursor: pointer;
   touch-action: manipulation;
+  flex-shrink: 0;
 }
 
 .play-fav.ativo { color: #ffd700; border-color: rgba(255, 215, 0, 0.6); }
@@ -282,7 +294,7 @@ body {
 .tab-bar {
   display: flex;
   gap: 0.5rem;
-  padding: 0.375rem 1.125rem 0.5rem;
+  padding: 0.375rem 0 0.5rem;
   border-bottom: 1px solid var(--borda);
 }
 
@@ -313,21 +325,87 @@ body {
 
 .salvos { padding-top: 0.25rem; }
 
-.canais-form {
+/* -------- Abas retráteis (playbacks salvos / canais) -------- */
+.colapsavel-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+  margin: 1rem 0 0.4rem;
+}
+.colapsavel-titulo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.colapsavel-seta {
+  margin-left: auto;
+  transition: transform 0.18s ease;
+  color: var(--texto-suave);
+}
+.colapsavel:not(.colapsavel-aberto) .colapsavel-seta { transform: rotate(-90deg); }
+.colapsavel:not(.colapsavel-aberto) .colapsavel-conteudo { display: none; }
+
+/* -------- Formulários (canais / agenda) -------- */
+.form-linha {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  padding: 0 1.125rem 0.5rem;
-  margin-bottom: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
 }
 
-.canais-form .campo { flex: 1; min-width: 180px; min-height: 48px; }
-.canais-form .botao { min-height: 48px; white-space: nowrap; }
+.form-linha .campo { flex: 1; min-width: 180px; min-height: 48px; }
+.form-linha .botao { min-height: 48px; white-space: nowrap; }
+.form-linha .campo-nome { flex: 0 1 200px; }
 
-@media (min-width: 720px) {
-  .tab-bar { max-width: 720px; margin-left: auto; margin-right: auto; }
+/* -------- Agenda -------- */
+.agenda-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.9rem;
+  margin-bottom: 0.625rem;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  min-width: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
+
+.agenda-card .play-url.suave { color: var(--texto-suave); font-style: italic; }
+
+.agenda-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.agenda-acoes .botao { min-height: 40px; }
+
+.agenda-desvincula {
+  width: 100%;
+  margin-top: 0.25rem;
+  color: var(--erro);
+  background: transparent;
+  border-color: var(--borda);
+}
+
+.agenda-busca {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--borda);
+}
+
+.agenda-busca-caixa {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.agenda-busca-caixa .campo { flex: 1; min-height: 44px; }
+.agenda-busca-res { margin-top: 0.5rem; }
 
 /* -------- Barra de filtros (YouTube) -------- */
 .yt-bar {
@@ -335,7 +413,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.125rem 0.25rem;
+  padding: 0.625rem 0 0.25rem;
 }
 
 .chip-toggle {
@@ -447,18 +525,6 @@ body {
 
 .yt-fav-salvo { border-color: rgba(255, 215, 0, 0.6); color: #ffd700; }
 
-@media (min-width: 720px) {
-  .yt-bar { max-width: 720px; margin-left: auto; margin-right: auto; }
-  .yt-card {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    grid-template-areas: "thumb info" "thumb acoes";
-  }
-  .yt-thumb { grid-area: thumb; aspect-ratio: auto; height: 100%; }
-  .yt-info { grid-area: info; }
-  .yt-acoes { grid-area: acoes; align-items: center; }
-}
-
 /* -------- Toast -------- */
 .toast {
   position: fixed;
@@ -479,8 +545,76 @@ body {
 .toast.ok   { border-color: var(--ok); }
 .toast.erro { border-color: var(--erro); color: var(--erro); }
 
+/* -------- Controle remoto (fixo no rodapé) -------- */
+.controle-remoto {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1.125rem calc(0.5rem + env(safe-area-inset-bottom));
+  background: rgba(10, 10, 10, 0.92);
+  border-top: 1px solid var(--borda);
+  backdrop-filter: blur(6px);
+  z-index: 90;
+}
+
+.controle-btn {
+  appearance: none;
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.controle-btn .rotulo {
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+}
+
+.controle-btn .seta { font-size: 1.5rem; line-height: 1; }
+
+.controle-btn:hover { border-color: var(--acento); }
+.controle-btn:active { transform: scale(0.97); }
+.controle-btn:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+
+.controle-btn-destaque {
+  background: #f2f4f8;
+  border-color: #f2f4f8;
+  color: #14161c;
+}
+.controle-btn-destaque .rotulo { color: #14161c; opacity: 0.7; }
+
+.controle-btn.preto-ativo { border-color: #888; background: var(--superficie-2); }
+.controle-btn.preto-ativo span { color: #fff; }
+
+/* margem no rodapé do main p/ o conteúdo não ficar atrás da barra */
+body { padding-bottom: 78px; }
+
+/* grade dos cards do YouTube em telas largas */
 @media (min-width: 720px) {
-  .busca, .item-lista { max-width: 720px; margin-left: auto; margin-right: auto; }
-  .grupo-titulo { max-width: 720px; margin-left: auto; margin-right: auto; }
-  .cabecalho { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .yt-card {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-areas: "thumb info" "thumb acoes";
+  }
+  .yt-thumb { grid-area: thumb; aspect-ratio: auto; height: 100%; }
+  .yt-info { grid-area: info; }
+  .yt-acoes { grid-area: acoes; align-items: center; }
 }

@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 import time
 import webbrowser
+from html import escape as html_escape
 
 from backend.database import database
 
@@ -171,6 +172,7 @@ def _abrir_ppt(caminho: str) -> None:
         log.warning("Não consegui garantir o primeiro plano do slideshow")
     finally:
         pythoncom.CoUninitialize()
+    _registrar_tipo("slide")
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +199,22 @@ _CAMINHOS_NAVEGADOR = [
 
 # A janela atualmente aberta (somente uma por vez) + o perfil temporário dela.
 _player = {"proc": None, "dir": None}
+
+# Controle remoto da projeção.
+#   _controle["tipo"]: "slide" | "player" | "preto" | None  (o que está na tela)
+#   _controle["view"]: referência COM do SlideShowWindow.View (p/ avançar/voltar)
+#   _controle["comando"]: comando pendente p/ o player consumir via polling
+_controle = {"tipo": None, "view": None, "comando": None}
+
+# Chaves de comando aceitas pelo player (play/pause).
+_COMANDOS_PLAYER = ("play_pause",)
+
+
+def _registrar_tipo(tipo: str | None) -> None:
+    _controle["tipo"] = tipo
+    if tipo != "slide":
+        # Ao sair de slide, descarta a referência COM do slideshow.
+        _controle["view"] = None
 
 
 def _qual_navegador() -> str | None:
@@ -342,7 +360,137 @@ def _abrir_player(player_url: str) -> bool:
         return False
     _player["dir"] = pasta
     _traz_janela_pra_frente(_player["proc"].pid)
+    # Reset do comando pendente ao abrir um novo player.
+    _controle["comando"] = None
     return True
+
+
+def abrir_mensagem(texto: str, host_port: str | None = None) -> dict:
+    """
+    Projeta um texto livre em tela cheia (útil p/ avisos, pregações, etc.).
+    Usa uma página local simples (reprojetada e encerrada com Alt+F4).
+    """
+    texto = (texto or "").strip()
+    if not texto:
+        raise ErroProjecao("Texto vazio.")
+    pagina = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<style>html,body{height:100vh;margin:0;display:flex;align-items:center;"
+        "justify-content:center;background:#000;color:#fff;font-family:sans-serif;"
+        "text-align:center;padding:4vw;}p{font-size:clamp(2rem,7vw,6rem);"
+        "line-height:1.3;margin:0;}</style></head><body><p>"
+        + html_escape(texto) + "</p></body></html>"
+    )
+    import base64
+    pasta = tempfile.mkdtemp(prefix="igreja_msg_")
+    caminho = os.path.join(pasta, "msg.html")
+    with open(caminho, "w", encoding="utf-8") as f:
+        f.write(pagina)
+    url = "file:///" + caminho.replace("\\", "/")
+    tela_cheia = _abrir_player(url)
+    _registrar_tipo("player")
+    # O _abrir_player cria o próprio profile; o limpeza dos arquivos da msg
+    # fica a cargo do _fechar_player_anterior (que remove a pasta do player).
+    return {"ok": True, "url": url, "modo": "tela cheia" if tela_cheia else "navegador"}
+
+
+def tela_preta(host_port: str | None = None) -> dict:
+    """
+    Projeta/alterna uma tela totalmente preta (para quando não há nada na
+    projeção). Fecha playbacks/slides ativos (exclusão mútua).
+    """
+    # Se já está preto, fecha (tela escura volta a refletir o próximo item).
+    if _controle.get("tipo") == "preto":
+        _fechar_player_anterior()
+        _registrar_tipo(None)
+        return {"ok": True, "preto": False}
+
+    pagina = (
+        "<!doctype html><html><head><meta charset='utf-8'><style>"
+        "html,body{height:100vh;margin:0;background:#000;}"
+        "</style></head><body></body></html>"
+    )
+    pasta = tempfile.mkdtemp(prefix="igreja_preto_")
+    caminho = os.path.join(pasta, "preto.html")
+    with open(caminho, "w", encoding="utf-8") as f:
+        f.write(pagina)
+    url = "file:///" + caminho.replace("\\", "/")
+    tela_cheia = _abrir_player(url)
+    _registrar_tipo("preto")
+    return {"ok": True, "preto": True, "modo": "tela cheia" if tela_cheia else "navegador"}
+
+
+def pegar_comando_player() -> dict:
+    """Devolve o comando pendente para o player consumir (polling)."""
+    cmd = _controle.get("comando")
+    _controle["comando"] = None  # consome
+    if cmd in _COMANDOS_PLAYER:
+        return {"comando": cmd}
+    return {"comando": None}
+
+
+def tipo_projecao() -> str | None:
+    """Tipo do que está na tela: 'slide' | 'player' | 'preto' | None."""
+    return _controle.get("tipo")
+
+
+def acao_projecao(acao: str, host_port: str | None = None) -> dict:
+    """
+    Executa uma ação remota sobre a projeção atual.
+      'slide_proximo' / 'slide_anterior' : avança/volta no slideshow (PPT)
+      'play_pause'                        : alterna play/pause do playback
+    """
+    if acao in ("slide_proximo", "slide_anterior"):
+        if _controle.get("tipo") != "slide":
+            raise ErroProjecao("Nenhum slide em projeção.")
+        _navegar_slide(1 if acao == "slide_proximo" else -1)
+        return {"ok": True, "acao": acao}
+
+    if acao == "play_pause":
+        if _controle.get("tipo") not in ("player", "preto"):
+            raise ErroProjecao("Nenhum playback em projeção.")
+        _controle["comando"] = "play_pause"
+        return {"ok": True, "acao": acao}
+
+    raise ErroProjecao(f"Ação desconhecida: {acao}")
+
+
+def _navegar_slide(delta: int) -> None:
+    """
+    Avança (+) ou volta (-) no slideshow do PowerPoint. Re-adquire a referência
+    COM na thread atual para evitar problemas após CoUninitialize.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+    except ImportError:
+        raise ErroProjecao("pywin32 não instalado neste PC.")
+    pythoncom.CoInitialize()
+    try:
+        aplicacao = win32com.client.GetActiveObject("PowerPoint.Application")
+        pres = None
+        for i in range(1, aplicacao.Presentations.Count + 1):
+            p = aplicacao.Presentations.Item(i)
+            try:
+                if p.SlideShowWindow is not None:
+                    pres = p
+                    break
+            except Exception:
+                continue
+        if pres is None or pres.SlideShowWindow is None:
+            raise ErroProjecao("Slideshow não está em execução.")
+        view = _retry(lambda: pres.SlideShowWindow.View)
+        if delta > 0:
+            _retry(lambda: view.Next())
+        else:
+            _retry(lambda: view.Previous())
+    except ErroProjecao:
+        raise
+    except Exception:
+        log.exception("Falha ao navegar nos slides")
+        raise ErroProjecao("Falha ao navegar nos slides.")
+    finally:
+        pythoncom.CoUninitialize()
 
 
 def abrir_youtube(youtube_id: str, host_port: str | None = None) -> dict:
@@ -351,6 +499,7 @@ def abrir_youtube(youtube_id: str, host_port: str | None = None) -> dict:
         raise ErroProjecao("Id de vídeo inválido.")
     player_url = f"http://127.0.0.1:{_porta_de(host_port)}/player/{youtube_id}"
     tela_cheia = _abrir_player(player_url)
+    _registrar_tipo("player")
     conn = database.conectar()
     try:
         _registrar_historico(conn, "playback", youtube_id)
@@ -378,6 +527,8 @@ def projetar(tipo: str, item_id: int, host_port: str | None = None) -> dict:
                 tela_cheia = _abrir_player(player_url)
             else:
                 tela_cheia = False
+            if tela_cheia:
+                _registrar_tipo("player")
             if row["url"] and not tela_cheia:
                 webbrowser.open(row["url"])
             _registrar_historico(conn, "playback", row["titulo"])

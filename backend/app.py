@@ -18,7 +18,7 @@ from flask import Flask, jsonify, request, render_template, redirect
 
 from backend import config
 from backend.database import database
-from backend.services import busca, projetor, scanner, youtube as yt
+from backend.services import agenda, busca, projetor, scanner, youtube as yt
 
 app = Flask(
     __name__,
@@ -53,7 +53,7 @@ def status():
     try:
         b = conn.execute("SELECT COUNT(*) c FROM biblia").fetchone()["c"]
         h = conn.execute("SELECT COUNT(*) c FROM harpa").fetchone()["c"]
-        return jsonify({"biblia": b, "harpa": h})
+        return jsonify({"biblia": b, "harpa": h, "projecao": projetor.tipo_projecao()})
     finally:
         conn.close()
 
@@ -178,6 +178,97 @@ def projetar():
     except Exception as e:
         app.logger.exception("Falha interna ao projetar")
         return jsonify({"erro": f"Erro interno: {e}"}), 500
+
+
+@app.route("/api/agenda")
+def agenda_listar():
+    """Lista as fichas da agenda (ordem de programação do culto)."""
+    database.criar_tabelas()
+    return jsonify(agenda.listar())
+
+
+@app.route("/api/agenda", methods=["POST"])
+def agenda_criar():
+    dados = request.get_json(silent=True) or {}
+    try:
+        ficha = agenda.criar(
+            dados.get("nome"), dados.get("texto"),
+            dados.get("tipo"), dados.get("ref_id"),
+        )
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+    return jsonify(ficha), 201
+
+
+@app.route("/api/agenda/<int:ficha_id>", methods=["PUT"])
+def agenda_atualizar(ficha_id):
+    dados = request.get_json(silent=True) or {}
+    try:
+        ficha = agenda.atualizar(
+            ficha_id,
+            nome=dados.get("nome", agenda._NAO_INFORMADO),
+            texto=dados.get("texto", agenda._NAO_INFORMADO),
+            tipo=dados.get("tipo", agenda._NAO_INFORMADO),
+            ref_id=dados.get("ref_id", agenda._NAO_INFORMADO),
+        )
+    except KeyError as e:
+        return jsonify({"erro": str(e)}), 404
+    return jsonify(ficha)
+
+
+@app.route("/api/agenda/ordenar", methods=["POST"])
+def agenda_ordenar():
+    dados = request.get_json(silent=True) or {}
+    ids = dados.get("ids") or []
+    agenda.reordenar([int(i) for i in ids])
+    return jsonify({"ok": True})
+
+
+@app.route("/api/agenda/<int:ficha_id>", methods=["DELETE"])
+def agenda_remover(ficha_id):
+    if not agenda.remover(ficha_id):
+        return jsonify({"erro": "Ficha não encontrada."}), 404
+    return jsonify({"ok": True})
+
+
+@app.route("/api/agenda/<int:ficha_id>/projetar", methods=["POST"])
+def agenda_projetar(ficha_id):
+    """Projeta/abre o item da ficha escolhida na agenda."""
+    try:
+        return jsonify(agenda.projetar(ficha_id, request.host))
+    except KeyError:
+        return jsonify({"erro": "Ficha não encontrada."}), 404
+    except projetor.ErroProjecao as e:
+        return jsonify({"erro": str(e)}), 422
+    except Exception:
+        app.logger.exception("Falha ao projetar ficha da agenda")
+        return jsonify({"erro": "Erro interno ao projetar."}), 500
+
+
+@app.route("/api/projecao/tela_preta", methods=["POST"])
+def projecao_tela_preta():
+    """Alterna a projeção de tela preta (ligar/desligar)."""
+    try:
+        return jsonify(projetor.tela_preta(request.host))
+    except projetor.ErroProjecao as e:
+        return jsonify({"erro": str(e)}), 422
+
+
+@app.route("/api/projecao/acao", methods=["POST"])
+def projecao_acao():
+    """Ação remota sobre a projeção: slide_proximo/anterior, play_pause."""
+    dados = request.get_json(silent=True) or {}
+    acao = dados.get("acao")
+    try:
+        return jsonify(projetor.acao_projecao(acao, request.host))
+    except projetor.ErroProjecao as e:
+        return jsonify({"erro": str(e)}), 422
+
+
+@app.route("/api/player/comando")
+def player_comando():
+    """Comando pendente consumido pelo player (polling de play/pause)."""
+    return jsonify(projetor.pegar_comando_player())
 
 
 if __name__ == "__main__":

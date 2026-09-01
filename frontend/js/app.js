@@ -8,10 +8,12 @@
   const abas = {
     acervo: document.getElementById("aba-acervo"),
     play: document.getElementById("aba-play"),
+    agenda: document.getElementById("aba-agenda"),
   };
   const tabsBtns = {
     acervo: document.getElementById("tab-acervo"),
     play: document.getElementById("tab-play"),
+    agenda: document.getElementById("tab-agenda"),
   };
   const resultados = document.getElementById("resultados");
   const vazio = document.getElementById("vazio");
@@ -76,9 +78,12 @@
     campo.placeholder =
       aba === "acervo"
         ? "Bíblia ou hino (ex.: Salmos 23)"
-        : "Buscar música no YouTube…";
+        : aba === "agenda"
+          ? "…"
+          : "Buscar música no YouTube…";
 
     if (aba === "play") { carregarPlaybacks(); }
+    if (aba === "agenda") { carregarAgenda(); }
 
     const q = campo.value.trim();
     if (!q) return;
@@ -92,6 +97,41 @@
 
   tabsBtns.acervo.addEventListener("click", function () { ativarAba("acervo"); });
   tabsBtns.play.addEventListener("click", function () { ativarAba("play"); });
+  tabsBtns.agenda.addEventListener("click", function () { ativarAba("agenda"); });
+
+  /* ---------- abas retráteis (playbacks/canais) ---------- */
+  (function () {
+    var chave = "igreja_colapsaveis";
+    var estado = {};
+    try { estado = JSON.parse(localStorage.getItem(chave) || "{}"); } catch (e) {}
+
+    document.querySelectorAll(".colapsavel").forEach(function (sec) {
+      var titulo = sec.querySelector(".colapsavel-titulo");
+      if (!titulo) return;
+      var id = sec.id;
+
+      function aplicar() {
+        var aberto = true;
+        if (id && Object.prototype.hasOwnProperty.call(estado, id)) {
+          aberto = estado[id] !== false;
+        }
+        sec.classList.toggle("colapsavel-aberto", aberto);
+        if (titulo) titulo.setAttribute("aria-expanded", aberto ? "true" : "false");
+      }
+
+      function alternar() {
+        var aberto = sec.classList.toggle("colapsavel-aberto");
+        if (titulo) titulo.setAttribute("aria-expanded", aberto ? "true" : "false");
+        if (id) { estado[id] = aberto; localStorage.setItem(chave, JSON.stringify(estado)); }
+      }
+
+      titulo.addEventListener("click", alternar);
+      titulo.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); }
+      });
+      aplicar();
+    });
+  })();
 
   /* ---------- renderização (acervo local) ---------- */
   function botaoItem(grupo, item) {
@@ -640,6 +680,285 @@
     campoCanal.value = "";
   });
 
+  /* ---------- agenda (programação do culto) ---------- */
+  const agendaLista = document.getElementById("agenda-lista");
+  const agendaVazio = document.getElementById("agenda-vazio");
+  const formAgenda = document.getElementById("form-agenda");
+  const campoNome = document.getElementById("campo-nome");
+
+  // Galeria de busca por item, aberta ao tocar em "➕ Item" de uma ficha.
+  let buscaItemAberta = null;  // id da ficha em edição de item, ou null
+  let buscaItemTimer = null;
+
+  function renderizarAgenda(lista) {
+    agendaLista.textContent = "";
+    agendaVazio.hidden = lista.length !== 0;
+
+    lista.forEach(function (f) {
+      const card = document.createElement("div");
+      card.className = "agenda-card";
+
+      const infos = document.createElement("div");
+      infos.className = "play-info";
+      const nome = document.createElement("span");
+      nome.className = "play-nome";
+      nome.textContent = f.nome;
+      const item = document.createElement("span");
+      item.className = "play-url" + (f.texto ? "" : " suave");
+      item.textContent = f.texto || "Sem item — toque em ➕";
+      infos.appendChild(nome);
+      infos.appendChild(item);
+      infos.addEventListener("click", function () {
+        if (f.tipo && f.ref_id != null) {
+          projetarFicha(f.id, f.nome);
+        } else {
+          abrirBuscaItem(f);
+        }
+      });
+
+      const acoes = document.createElement("div");
+      acoes.className = "agenda-acoes";
+
+      const tocar = document.createElement("button");
+      tocar.type = "button";
+      tocar.className = "botao botao-acao";
+      tocar.textContent = "▶";
+      tocar.title = "Reproduzir";
+      tocar.addEventListener("click", function () {
+        if (f.tipo && f.ref_id != null) {
+          projetarFicha(f.id, f.nome);
+        } else {
+          abrirBuscaItem(f);
+        }
+      });
+
+      const addItem = document.createElement("button");
+      addItem.type = "button";
+      addItem.className = "botao botao-secundario";
+      addItem.textContent = f.tipo ? "🔄 Item" : "➕";
+      addItem.title = "Escolher/adicionar o item";
+      addItem.addEventListener("click", function () {
+        abrirBuscaItem(f);
+      });
+
+      const remover = document.createElement("button");
+      remover.type = "button";
+      remover.className = "play-remover";
+      remover.textContent = "✕";
+      remover.title = "Remover";
+      remover.addEventListener("click", function () {
+        removerFicha(f.id);
+      });
+
+      acoes.appendChild(tocar);
+      acoes.appendChild(addItem);
+      acoes.appendChild(remover);
+
+      card.appendChild(infos);
+      card.appendChild(acoes);
+      agendaLista.appendChild(card);
+
+      // A busca de item fica "embaixo" do card, quando aberta.
+      if (buscaItemAberta === f.id) {
+        card.appendChild(montarPainelBuscaItem(f));
+      } else if (f.tipo && f.ref_id != null) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "botao botao-secundario agenda-desvincula";
+        remove.textContent = "remover item";
+        remove.addEventListener("click", function () {
+          if (confirm("Remover o item de " + f.nome + "?")) {
+            setItemFicha(f.id, null, null, "");
+          }
+        });
+        card.appendChild(remove);
+      }
+    });
+  }
+
+  function montarPainelBuscaItem(f) {
+    const painel = document.createElement("div");
+    painel.className = "agenda-busca";
+    painel.id = "painel-busca-" + f.id;
+
+    const caixa = document.createElement("div");
+    caixa.className = "agenda-busca-caixa";
+    const input = document.createElement("input");
+    input.className = "campo";
+    input.type = "search";
+    input.placeholder = "Buscar hino, bíblia ou playback salvo…";
+    input.autocomplete = "off";
+    caixa.appendChild(input);
+
+    const fechar = document.createElement("button");
+    fechar.type = "button";
+    fechar.className = "botao botao-secundario";
+    fechar.textContent = "✕";
+    fechar.title = "Fechar";
+    fechar.addEventListener("click", function () {
+      buscaItemAberta = null;
+      carregarAgenda();
+    });
+    caixa.appendChild(fechar);
+
+    const resultados = document.createElement("div");
+    resultados.className = "item-lista agenda-busca-res";
+
+    painel.appendChild(caixa);
+    painel.appendChild(resultados);
+
+    function executar() {
+      const q = input.value.trim();
+      if (!q) { resultados.textContent = ""; return; }
+      fetch("/api/pesquisa?q=" + encodeURIComponent(q) + "&limite=6")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          resultados.textContent = "";
+          const linhas = [];
+          ["harpa", "biblia", "playback"].forEach(function (g) {
+            (d[g] || []).forEach(function (it) {
+              linhas.push({ tipo: g, ref_id: it.id, rotulo: formatarItem(g, it) });
+            });
+          });
+          if (!linhas.length) {
+            const v = document.createElement("p");
+            v.className = "vazio";
+            v.textContent = "Nada encontrado.";
+            resultados.appendChild(v);
+            return;
+          }
+          linhas.forEach(function (it) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "card";
+            const et = document.createElement("span");
+            et.className = "card-etiqueta " + etiquetaClasse(it.tipo);
+            et.textContent = etiquetaTexto(it.tipo);
+            const p = document.createElement("span");
+            p.className = "card-principal";
+            p.textContent = it.rotulo;
+            b.appendChild(et);
+            b.appendChild(p);
+            b.addEventListener("click", function () {
+              setItemFicha(f.id, it.tipo, it.ref_id, it.rotulo);
+            });
+            resultados.appendChild(b);
+          });
+        })
+        .catch(function () {
+          resultados.textContent = "";
+          const v = document.createElement("p");
+          v.className = "vazio";
+          v.textContent = "Falha na busca.";
+          resultados.appendChild(v);
+        });
+    }
+
+    input.addEventListener("input", function () {
+      clearTimeout(buscaItemTimer);
+      buscaItemTimer = setTimeout(executar, 300);
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); clearTimeout(buscaItemTimer); executar(); }
+    });
+    setTimeout(function () { input.focus(); }, 0);
+    return painel;
+  }
+
+  function formatarItem(g, it) {
+    if (g === "harpa") return "Harpa " + it.numero + (it.titulo ? " · " + it.titulo : "");
+    if (g === "biblia") return (it.livro_exibicao || it.livro) + " " + it.capitulo;
+    return it.titulo;
+  }
+
+  function setItemFicha(fichaId, tipo, refId, rotulo) {
+    const corpo = { tipo: tipo, ref_id: refId, texto: rotulo || "" };
+    fetch("/api/agenda/" + fichaId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    })
+      .then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
+      .then(function (r) {
+        if (r.ok) {
+          mostrarToast("Item salvo ✓", "ok");
+          buscaItemAberta = null;
+          carregarAgenda();
+        } else {
+          mostrarToast(r.d.erro || "Falha ao salvar.", "erro");
+        }
+      })
+      .catch(function () { mostrarToast("Falha ao salvar.", "erro"); });
+  }
+
+  function abrirBuscaItem(f) {
+    buscaItemAberta = (buscaItemAberta === f.id) ? null : f.id;
+    carregarAgenda();
+  }
+
+  function carregarAgenda() {
+    fetch("/api/agenda")
+      .then(function (r) { return r.json(); })
+      .then(renderizarAgenda)
+      .catch(function () {
+        mostrarToast("Falha ao listar a agenda.", "erro");
+      });
+  }
+
+  function projetarFicha(fichaId, nome) {
+    mostrarToast("Reproduzindo " + nome + "…", "");
+    fetch("/api/agenda/" + fichaId + "/projetar", { method: "POST" })
+      .then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
+      .then(function (r) {
+        if (r.ok) {
+          mostrarToast("Renderizado ✓", "ok");
+        } else {
+          mostrarToast(r.d.erro || "Falha ao reproduzir.", "erro");
+        }
+      })
+      .catch(function () {
+        mostrarToast("Falha ao reproduzir.", "erro");
+      });
+  }
+
+  function removerFicha(fichaId) {
+    if (!confirm("Remover esta pessoa da agenda?")) return;
+    fetch("/api/agenda/" + fichaId, { method: "DELETE" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) { mostrarToast("Removido ✓", "ok"); carregarAgenda(); }
+      })
+      .catch(function () { mostrarToast("Falha ao remover.", "erro"); });
+  }
+
+  formAgenda.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const nome = campoNome.value.trim();
+    if (!nome) { campoNome.focus(); return; }
+    fetch("/api/agenda", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome: nome }),
+    })
+      .then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
+      .then(function (r) {
+        if (r.ok) {
+          campoNome.value = "";
+          mostrarToast(nome + " adicionado ✓", "ok");
+          carregarAgenda();
+        } else {
+          mostrarToast(r.d.erro || "Falha ao adicionar.", "erro");
+        }
+      })
+      .catch(function () { mostrarToast("Falha ao adicionar.", "erro"); });
+  });
+
   /* ---------- status / atualizar ---------- */
   function carregarStatus() {
     fetch("/api/status")
@@ -671,9 +990,79 @@
       });
   });
 
+  /* ---------- controle remoto (tela preta / slides / play-pause) ---------- */
+  (function () {
+    var btnPreto = document.getElementById("btn-tela-preta");
+    var iconePreto = document.getElementById("icone-preto");
+    var btnProx = document.getElementById("btn-slide-prox");
+    var btnAnt = document.getElementById("btn-slide-ant");
+    var btnPause = document.getElementById("btn-player-pause");
+    var iconePause = document.getElementById("icone-pause");
+
+    function acao(payload) {
+      return fetch("/api/projecao/acao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok) mostrarToast(d.erro || "Não deu para executar.", "erro");
+          return d;
+        })
+        .catch(function () { mostrarToast("Falha no controle.", "erro"); });
+    }
+
+    function marcarPreto(estaPreto) {
+      if (estaPreto) {
+        btnPreto.classList.add("preto-ativo");
+        if (iconePreto) iconePreto.textContent = "◼";
+      } else {
+        btnPreto.classList.remove("preto-ativo");
+        if (iconePreto) iconePreto.textContent = "⬛";
+      }
+    }
+
+    function carregarEstadoPreto() {
+      fetch("/api/status")
+        .then(function (r) { return r.json(); })
+        .then(function (d) { marcarPreto(!!d.projecao && d.projecao === "preto"); })
+        .catch(function () {});
+    }
+
+    if (btnPreto) {
+      btnPreto.addEventListener("click", function () {
+        fetch("/api/projecao/tela_preta", { method: "POST" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) {
+              marcarPreto(!!d.preto);
+              mostrarToast(d.preto ? "Tela preta ✓" : "Tela preta desligada.", "ok");
+            } else {
+              mostrarToast(d.erro || "Falha na tela preta.", "erro");
+            }
+          })
+          .catch(function () { mostrarToast("Falha na tela preta.", "erro"); });
+      });
+    }
+
+    if (btnProx) {
+      btnProx.addEventListener("click", function () { acao({ acao: "slide_proximo" }); });
+    }
+    if (btnAnt) {
+      btnAnt.addEventListener("click", function () { acao({ acao: "slide_anterior" }); });
+    }
+    if (btnPause) {
+      btnPause.addEventListener("click", function () { acao({ acao: "play_pause" }); });
+    }
+
+    carregarEstadoPreto();
+  })();
+
   /* ---------- início ---------- */
   vazio.hidden = false;
   carregarStatus();
   carregarPlaybacks();
   carregarCanais();
+  carregarAgenda();
 })();

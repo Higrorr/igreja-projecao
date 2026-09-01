@@ -13,10 +13,10 @@
 </head>
 <body>
   <header class="cabecalho">
-    <h1 class="titulo">Projeção</h1>
+    <h1 class="titulo">Biblia & Harpa</h1>
     <div class="status" id="status" hidden>
       <span id="contagem"></span>
-      <button class="botao botao-secundario" id="btn-atualizar" type="button">🔄 Atualizar</button>
+      <button class="botao botao-secundario" id="btn-atualizar" type="button">Atualizar</button>
     </div>
   </header>
 
@@ -36,9 +36,11 @@
 
     <nav class="tab-bar" role="tablist" aria-label="Modo de busca">
       <button class="aba ativa" id="tab-acervo" type="button" role="tab"
-              aria-selected="true" aria-controls="aba-acervo">📖 Acervo</button>
+              aria-selected="true" aria-controls="aba-acervo">Acervo</button>
       <button class="aba" id="tab-play" type="button" role="tab"
-              aria-selected="false" aria-controls="aba-play">🎤 Playbacks</button>
+              aria-selected="false" aria-controls="aba-play">Playbacks</button>
+      <button class="aba" id="tab-agenda" type="button" role="tab"
+              aria-selected="false" aria-controls="aba-agenda">Agenda</button>
     </nav>
 
     <div id="aba-acervo" role="tabpanel" aria-labelledby="tab-acervo">
@@ -60,29 +62,37 @@
     <div id="aba-play" role="tabpanel" aria-labelledby="tab-play" hidden>
       <p class="dica">Digite a música e toque em buscar (ex.: “A Ele a Glória”).</p>
 
-      <section class="salvos">
-        <h2 class="grupo-titulo">Playbacks salvos <span class="grupo-badge" id="play-badge"></span></h2>
-        <div id="lista-play" class="item-lista"></div>
-        <div id="play-vazio" class="vazio">Nenhum playback salvo ainda.</div>
+      <section class="salvos colapsavel" id="sec-savos">
+        <h2 class="grupo-titulo colapsavel-titulo" tabindex="0" role="button"
+            aria-expanded="true">Playbacks salvos <span class="grupo-badge" id="play-badge"></span>
+          <span class="colapsavel-seta" aria-hidden="true">▾</span></h2>
+        <div class="colapsavel-conteudo">
+          <div id="lista-play" class="item-lista"></div>
+          <div id="play-vazio" class="vazio">Nenhum playback salvo ainda.</div>
+        </div>
       </section>
 
-      <section class="salvos">
-        <h2 class="grupo-titulo">Canais priorizados <span class="grupo-badge" id="canais-badge"></span></h2>
-        <p class="dica">Canais marcados aqui ficam no topo da busca no YouTube.</p>
-        <form id="form-canal" class="canais-form" autocomplete="off">
-          <input id="campo-canal" class="campo" type="text"
-                 placeholder="Nome do canal (ex.: Odete Playback)"
-                 aria-label="Nome do canal para priorizar">
-          <button class="botao" type="submit">Adicionar</button>
-        </form>
-        <div id="lista-canais" class="item-lista"></div>
-        <div id="canais-vazio" class="vazio">Nenhum canal priorizado.</div>
+      <section class="salvos colapsavel" id="sec-canais">
+        <h2 class="grupo-titulo colapsavel-titulo" tabindex="0" role="button"
+            aria-expanded="true">Canais priorizados <span class="grupo-badge" id="canais-badge"></span>
+          <span class="colapsavel-seta" aria-hidden="true">▾</span></h2>
+        <div class="colapsavel-conteudo">
+          <p class="dica">Canais marcados aqui ficam no topo da busca no YouTube.</p>
+          <form id="form-canal" class="form-linha" autocomplete="off">
+            <input id="campo-canal" class="campo" type="text"
+                  placeholder="Nome do canal (ex.: Odete Playback)"
+                  aria-label="Nome do canal para priorizar">
+            <button class="botao" type="submit">Adicionar</button>
+          </form>
+          <div id="lista-canais" class="item-lista"></div>
+          <div id="canais-vazio" class="vazio">Nenhum canal priorizado.</div>
+        </div>
       </section>
 
       <div class="yt-bar">
-        <span class="dica-chip chip-toggle ativo" data-t="playback">🎵 Playback</span>
-        <span class="dica-chip chip-toggle ativo" data-t="instrumental">🎻 Instrumental</span>
-        <span class="dica-chip chip-toggle" data-t="vivo">📡 Ao vivo</span>
+        <span class="dica-chip chip-toggle ativo" data-t="playback">Playback</span>
+        <span class="dica-chip chip-toggle ativo" data-t="instrumental">instrumental</span>
+        <span class="dica-chip chip-toggle" data-t="vivo">Ao vivo</span>
         <button class="botao botao-secundario" id="btn-buscar-yt" type="button">Buscar no YouTube</button>
       </div>
 
@@ -92,9 +102,29 @@
         <div id="yt-vazio" class="vazio"></div>
       </section>
     </div>
+
+    <div id="aba-agenda" role="tabpanel" aria-labelledby="tab-agenda" hidden>
+      <p class="dica">Programação do culto: cadastre o nome e o item (hino/música/palavra) de cada um. Toque no nome para reproduzir o que ficou salvo.</p>
+
+      <form id="form-agenda" class="form-linha" autocomplete="off">
+        <input id="campo-nome" class="campo campo-nome" type="text" placeholder="Nome (ex.: Pedro)"
+              aria-label="Nome da pessoa">
+        <button class="botao botao-acao" type="submit">Adicionar</button>
+      </form>
+
+      <div id="agenda-lista" class="item-lista"></div>
+      <div id="agenda-vazio" class="vazio">Nenhuma pessoa na agenda ainda.</div>
+    </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <nav class="controle-remoto" role="toolbar" aria-label="Controle da projeção">
+    <button type="button" class="controle-btn" id="btn-slide-ant" title="Voltar slide" aria-label="Voltar slide"><span class="seta">‹</span><span class="rotulo">Voltar</span></button>
+    <button type="button" class="controle-btn controle-btn-destaque" id="btn-player-pause" title="Play/Pause" aria-label="Play ou pausar"><span id="icone-pause">⏸</span><span class="rotulo">Play</span></button>
+    <button type="button" class="controle-btn" id="btn-slide-prox" title="Avançar slide" aria-label="Avançar slide"><span class="seta">›</span><span class="rotulo">Avançar</span></button>
+    <button type="button" class="controle-btn" id="btn-tela-preta" title="Tela preta" aria-label="Tela preta"><span id="icone-preto">⬛</span><span class="rotulo">Preto</span></button>
+  </nav>
 
   <script src="js/app.js"></script>
 </body>

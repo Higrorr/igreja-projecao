@@ -18,8 +18,14 @@
       margin: auto;
       width: min(100vw, calc(100vh * 16 / 9));
       height: min(100vh, calc(100vw * 9 / 16));
-      border: 0;
       background: #000;
+    }
+    #player iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
     }
     #dica {
       position: fixed;
@@ -38,13 +44,43 @@
   </style>
 </head>
 <body>
-  <iframe id="player"
-    src="https://www.youtube.com/embed/{{ youtube_id }}?autoplay=1&rel=0&playsinline=1"
-    title="Playback"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-    allowfullscreen></iframe>
+  <div id="player"></div>
   <div id="dica">Esc ou F11 sai da tela cheia</div>
   <script>
+    var TAG = document.createElement('script');
+    TAG.src = "https://www.youtube.com/iframe_api";
+    var primeiro = document.getElementsByTagName('script')[0];
+    primeiro.parentNode.insertBefore(TAG, primeiro);
+
+    var player = null;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        videoId: "{{ youtube_id }}",
+        playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
+        events: {
+          onReady: function () { if (player) player.playVideo(); }
+        }
+      });
+    }
+
+    // Polling do comando local: o celular aperta play/pause -> posta a ação,
+    // este player consome via /api/player/comando e alterna.
+    setInterval(function () {
+      if (!window.YT || !player || !player.playVideo) return;
+      fetch("/api/player/comando")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.comando === "play_pause") {
+            if (player.getPlayerState && player.getPlayerState() === 1) {
+              player.pauseVideo();
+            } else {
+              player.playVideo();
+            }
+          }
+        })
+        .catch(function () {});
+    }, 1200);
+
     setTimeout(function () {
       var d = document.getElementById("dica");
       if (d) d.style.opacity = "0";
