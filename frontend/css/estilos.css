@@ -525,25 +525,22 @@ main {
 
 .yt-fav-salvo { border-color: rgba(255, 215, 0, 0.6); color: #ffd700; }
 
-/* -------- Toast -------- */
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 1.25rem;
-  transform: translateX(-50%);
-  background: var(--superficie-2);
-  border: 1px solid var(--borda);
-  color: var(--texto);
-  border-radius: 999px;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.9rem;
-  z-index: 100;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  max-width: 90%;
+/* -------- Feedback sutil (pisca o próprio botão tocado) -------- */
+@keyframes flash-borda {
+  0%   { box-shadow: 0 0 0 0 var(--flash-cor); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-.toast.ok   { border-color: var(--ok); }
-.toast.erro { border-color: var(--erro); color: var(--erro); }
+.flash-ok,
+.flash-erro,
+.flash-info {
+  --flash-cor: var(--ok);
+  animation: flash-borda 0.7s ease-out;
+  border-color: var(--flash-cor) !important;
+}
+.flash-erro { --flash-cor: var(--erro); }
+.flash-info { --flash-cor: #d7bc7a; }
 
 /* -------- Controle remoto (fixo no rodapé) -------- */
 .controle-remoto {

@@ -47,12 +47,33 @@
   let timerYt = null;
 
   /* ---------- helpers ---------- */
+  // Registra o último controle tocado para piscá-lo em resposta à ação
+  // (verde = sucesso, vermelho = erro) em vez de mostrar mensagem.
+  var ultimoControle = null;
+  document.addEventListener("pointerdown", function (e) {
+    var el = e.target && e.target.closest ? e.target.closest("button, .controle-btn, .item-lista, .play-card") : null;
+    if (el) ultimoControle = el;
+  }, true);
+
   function mostrarToast(msg, tipo) {
-    toast.textContent = msg;
-    toast.className = "toast " + (tipo || "");
-    toast.hidden = false;
-    clearTimeout(mostrarToast._t);
-    mostrarToast._t = setTimeout(function () { toast.hidden = true; }, 2600);
+    // Feedback sutil: pisca o próprio botão tocado em verde (ok) ou vermelho
+    // (erro). Não mostra mais nenhuma mensagem persistente na tela.
+    var alvo = ultimoControle;
+    if (alvo) {
+      var classe = tipo === "ok"
+        ? "flash-ok"
+        : tipo === "erro"
+          ? "flash-erro"
+          : "flash-info";
+      alvo.classList.remove("flash-ok", "flash-erro", "flash-info");
+      void alvo.offsetWidth; // reinicia a animação
+      alvo.classList.add(classe);
+      clearTimeout(mostrarToast._t);
+      mostrarToast._t = setTimeout(function () {
+        alvo.classList.remove("flash-ok", "flash-erro", "flash-info");
+      }, 700);
+    }
+    if (toast) toast.hidden = true;
   }
 
   function etiquetaTexto(tipo) {
