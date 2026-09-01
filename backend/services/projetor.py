@@ -148,28 +148,32 @@ def _abrir_ppt(caminho: str) -> None:
             )
         )
         _retry(lambda: apresentacao.SlideShowSettings.Run())
+        # O Windows pode abrir a projeção minimizada/atrás quando o PowerPoint é
+        # acionado por um processo em segundo plano. Garante tela cheia
+        # (ppSlideShowFullScreen = 1) e traz a janela do slideshow para o
+        # primeiro plano (SW_RESTORE + SetForegroundWindow + Alt). Nunca quebra
+        # a projeção: falhas aqui apenas viram warning.
+        try:
+            janela_slides = apresentacao.SlideShowWindow
+            janela_slides.WindowState = 1  # ppSlideShowFullScreen
+            try:
+                janela_slides.Activate()
+            except Exception:
+                pass
+            try:
+                from ctypes import windll
+                _ativar_hwnd_primeiro_plano(
+                    windll.user32, janela_slides.HWND, fullscreen=False
+                )
+            except Exception:
+                pass
+        except Exception:
+            log.warning("Não consegui garantir o primeiro plano do slideshow")
     except ErroProjecao:
         raise
     except Exception as e:
         log.exception("Falha ao abrir/projetar o arquivo")
         raise ErroProjecao(f"Falha ao projetar: {e}")
-    finally:
-        pythoncom.CoUninitialize()
-
-    # O Windows pode abrir a projeção minimizada quando o PowerPoint é
-    # acionado por um processo em segundo plano. Garante o modo tela cheia
-    # (ppSlideShowFullScreen = 1) e tenta ativar a janela. Nunca quebra a
-    # projeção: falhas aqui apenas são registradas (sem stack, em warning).
-    try:
-        pythoncom.CoInitialize()
-        janela_slides = apresentacao.SlideShowWindow
-        janela_slides.WindowState = 1
-        try:
-            janela_slides.Activate()
-        except Exception:
-            pass
-    except Exception:
-        log.warning("Não consegui garantir o primeiro plano do slideshow")
     finally:
         pythoncom.CoUninitialize()
     _registrar_tipo("slide")
@@ -207,7 +211,7 @@ _player = {"proc": None, "dir": None}
 _controle = {"tipo": None, "view": None, "comando": None}
 
 # Chaves de comando aceitas pelo player (play/pause).
-_COMANDOS_PLAYER = ("play_pause",)
+_COMANDOS_PLAYER = ("play_pause", "recomecar")
 
 
 def _registrar_tipo(tipo: str | None) -> None:
@@ -291,6 +295,30 @@ def _janela_em_tela_cheia(user32, hwnd) -> bool:
     return (r.right - r.left) >= largura - 2 and (r.bottom - r.top) >= altura - 2
 
 
+def _ativar_hwnd_primeiro_plano(user32, hwnd, fullscreen: bool = True) -> bool:
+    """
+    Desminimiza (se minimizado), traz a janela para o primeiro plano e,
+    opcionalmente, garante a tela cheia (aperta F11 se não estiver). Usado
+    tanto para o navegador (playback) quanto para o PowerPoint (slides).
+    """
+    import time
+
+    if user32.IsIconic(hwnd):
+        user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+    if not user32.SetForegroundWindow(hwnd):
+        # O Windows restringe a mudança de foreground vinda de background; um
+        # toque inofensivo na tecla Alt libera a permissão.
+        user32.keybd_event(0x12, 0, 0, 0)  # VK_MENU pressiona e solta
+        user32.keybd_event(0x12, 0, 2, 0)
+        user32.SetForegroundWindow(hwnd)
+    time.sleep(0.3)
+    if fullscreen and not _janela_em_tela_cheia(user32, hwnd):
+        user32.keybd_event(0x7A, 0, 0, 0)  # VK_F11 (tela cheia no Chrome)
+        time.sleep(0.05)
+        user32.keybd_event(0x7A, 0, 2, 0)
+    return True
+
+
 def _traz_janela_pra_frente(pid: int, timeout_s: float = 8.0) -> bool:
     """
     Windows abre minimizada/atrás as janelas criadas por processos em segundo
@@ -312,20 +340,7 @@ def _traz_janela_pra_frente(pid: int, timeout_s: float = 8.0) -> bool:
         time.sleep(0.15)
     if hwnd is None:
         return False
-    if user32.IsIconic(hwnd):
-        user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-    if not user32.SetForegroundWindow(hwnd):
-        # O Windows restringe mudança de foreground vinda de background; um
-        # toque inofensivo na tecla Alt libera a permissão.
-        user32.keybd_event(0x12, 0, 0, 0)  # VK_MENU pressiona e solta
-        user32.keybd_event(0x12, 0, 2, 0)
-        user32.SetForegroundWindow(hwnd)
-    time.sleep(0.3)
-    if not _janela_em_tela_cheia(user32, hwnd):
-        user32.keybd_event(0x7A, 0, 0, 0)  # VK_F11 (tela cheia no Chrome)
-        time.sleep(0.05)
-        user32.keybd_event(0x7A, 0, 2, 0)
-    return True
+    return _ativar_hwnd_primeiro_plano(user32, hwnd, fullscreen=True)
 
 
 def _abrir_player(player_url: str) -> bool:
@@ -450,6 +465,12 @@ def acao_projecao(acao: str, host_port: str | None = None) -> dict:
         if _controle.get("tipo") not in ("player", "preto"):
             raise ErroProjecao("Nenhum playback em projeção.")
         _controle["comando"] = "play_pause"
+        return {"ok": True, "acao": acao}
+
+    if acao == "recomecar":
+        if _controle.get("tipo") not in ("player", "preto"):
+            raise ErroProjecao("Nenhum playback em projeção.")
+        _controle["comando"] = "recomecar"
         return {"ok": True, "acao": acao}
 
     raise ErroProjecao(f"Ação desconhecida: {acao}")

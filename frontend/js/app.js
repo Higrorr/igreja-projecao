@@ -998,6 +998,7 @@
     var btnAnt = document.getElementById("btn-slide-ant");
     var btnPause = document.getElementById("btn-player-pause");
     var iconePause = document.getElementById("icone-pause");
+    var btnRecomecar = document.getElementById("btn-player-recomecar");
 
     function acao(payload) {
       return fetch("/api/projecao/acao", {
@@ -1054,6 +1055,11 @@
     }
     if (btnPause) {
       btnPause.addEventListener("click", function () { acao({ acao: "play_pause" }); });
+    }
+    if (btnRecomecar) {
+      btnRecomecar.addEventListener("click", function () {
+        acao({ acao: "recomecar" });
+      });
     }
 
     carregarEstadoPreto();

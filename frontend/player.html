@@ -70,12 +70,16 @@
       fetch("/api/player/comando")
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d && d.comando === "play_pause") {
-            if (player.getPlayerState && player.getPlayerState() === 1) {
+          if (!d || !player.getPlayerState) return;
+          if (d.comando === "play_pause") {
+            if (player.getPlayerState() === 1) {
               player.pauseVideo();
             } else {
               player.playVideo();
             }
+          } else if (d.comando === "recomecar") {
+            player.seekTo(0, true);
+            player.playVideo();
           }
         })
         .catch(function () {});
