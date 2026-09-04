@@ -630,6 +630,9 @@ def projetar(tipo: str, item_id: int, host_port: str | None = None) -> dict:
                     + row["youtube_id"]
                 )
                 tela_cheia = _abrir_player(player_url)
+            elif row["url"]:
+                # Link não-YouTube: abre em tela cheia no navegador também.
+                tela_cheia = _abrir_player(row["url"])
             else:
                 tela_cheia = False
             if tela_cheia:

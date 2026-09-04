@@ -32,6 +32,8 @@
   const canaisBadge = document.getElementById("canais-badge");
   const formCanal = document.getElementById("form-canal");
   const campoCanal = document.getElementById("campo-canal");
+  const formLink = document.getElementById("form-link");
+  const campoLink = document.getElementById("campo-link");
 
   const chips = document.querySelectorAll(".chip-toggle");
   const btnBuscarYt = document.getElementById("btn-buscar-yt");
@@ -527,7 +529,7 @@
       fav.textContent = "⭐";
       fav.title = "Remover dos salvos";
       fav.addEventListener("click", function () {
-        removerFavoritoPlay(p.youtube_id);
+        removerFavoritoPlay(p.id);
       });
 
       const info = document.createElement("div");
@@ -540,6 +542,13 @@
       url.textContent = p.url || ("youtu.be/" + p.youtube_id);
       info.appendChild(nome);
       info.appendChild(url);
+
+      const ver = document.createElement("button");
+      ver.type = "button";
+      ver.className = "play-ver";
+      ver.textContent = "👁";
+      ver.title = "Ver/ouvir no celular antes de projetar";
+      ver.addEventListener("click", function () { abrirPreview(p); });
 
       const tocar = document.createElement("button");
       tocar.type = "button";
@@ -554,11 +563,12 @@
       remover.textContent = "✕";
       remover.title = "Remover dos salvos";
       remover.addEventListener("click", function () {
-        removerFavoritoPlay(p.youtube_id);
+        removerFavoritoPlay(p.id);
       });
 
       linha.appendChild(fav);
       linha.appendChild(info);
+      linha.appendChild(ver);
       linha.appendChild(tocar);
       linha.appendChild(remover);
       listaPlay.appendChild(linha);
@@ -574,23 +584,65 @@
       });
   }
 
-  function removerFavoritoPlay(youtubeId) {
+  function removerFavoritoPlay(playbackId) {
     if (!confirm("Remover este playback dos salvos?")) return;
-    fetch("/api/youtube/desfavoritar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ youtube_id: youtubeId }),
-    })
+    fetch("/api/playback/" + playbackId, { method: "DELETE" })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.ok) {
           mostrarToast("Removido ✓", "ok");
           carregarPlaybacks();
+        } else {
+          mostrarToast(d.erro || "Falha ao remover.", "erro");
         }
       })
       .catch(function () {
         mostrarToast("Falha ao remover.", "erro");
       });
+  }
+
+  /* ---------- prévia do playback no celular ---------- */
+  const modalPreview = document.getElementById("modal-preview");
+  const previewIframe = document.getElementById("preview-iframe");
+  const previewTitulo = document.getElementById("preview-titulo");
+  const btnPreviewProjetar = document.getElementById("btn-preview-projetar");
+  let previewAtual = null;
+
+  function fecharPreview() {
+    if (!modalPreview) return;
+    modalPreview.hidden = true;
+    if (previewIframe) previewIframe.src = "";
+    previewAtual = null;
+  }
+
+  function abrirPreview(p) {
+    previewAtual = p;
+    if (previewTitulo) previewTitulo.textContent = p.titulo || "Prévia";
+    if (previewIframe) {
+      if (p.youtube_id) {
+        previewIframe.src =
+          "https://www.youtube.com/embed/" + p.youtube_id +
+          "?autoplay=1&rel=0&playsinline=1";
+      } else if (p.url) {
+        previewIframe.src = p.url;
+      } else {
+        previewIframe.src = "";
+      }
+    }
+    if (modalPreview) modalPreview.hidden = false;
+  }
+
+  if (modalPreview) {
+    modalPreview.querySelectorAll("[data-fechar-preview]").forEach(function (el) {
+      el.addEventListener("click", fecharPreview);
+    });
+    if (btnPreviewProjetar) {
+      btnPreviewProjetar.addEventListener("click", function () {
+        const p = previewAtual;
+        fecharPreview();
+        if (p) projetar("playback", p.id);
+      });
+    }
   }
 
   /* ---------- canais priorizados ---------- */
@@ -700,6 +752,37 @@
     priorizarCanal(nome, null, formCanal.querySelector("button"));
     campoCanal.value = "";
   });
+
+  /* ---------- salvar playback por link ---------- */
+  if (formLink) {
+    formLink.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const url = campoLink.value.trim();
+      if (!url) {
+        campoLink.focus();
+        return;
+      }
+      const btn = formLink.querySelector("button");
+      btn.disabled = true;
+      fetch("/api/youtube/salvar_link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.id) {
+            mostrarToast("Salvo ✓", "ok");
+            campoLink.value = "";
+            carregarPlaybacks();
+          } else {
+            mostrarToast(d.erro || "Falha ao salvar.", "erro");
+          }
+        })
+        .catch(function () { mostrarToast("Falha ao salvar.", "erro"); })
+        .finally(function () { btn.disabled = false; });
+    });
+  }
 
   /* ---------- agenda (programação do culto) ---------- */
   const agendaLista = document.getElementById("agenda-lista");

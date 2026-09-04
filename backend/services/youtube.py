@@ -422,10 +422,85 @@ def favoritar(youtube_id: str, titulo: str, url: str | None = None) -> dict:
         conn.close()
 
 
+_YOUTUBE_ID_RE = re.compile(
+    r"(?:youtube\.com/(?:watch\?[^#\s]*v=|embed/|shorts/|v/)"
+    r"|youtu\.be/)([A-Za-z0-9_-]{6,})"
+)
+
+
+def _extrair_youtube_id(url: str) -> str | None:
+    """Extrai o id do vídeo de diversos formatos de link do YouTube, ou None."""
+    if not url:
+        return None
+    m = _YOUTUBE_ID_RE.search(url.strip())
+    if not m:
+        return None
+    vid = m.group(1)
+    return vid if _VIDEO_ID.match(vid) else None
+
+
+def salvar_por_url(url: str, titulo: str = "") -> dict:
+    """
+    Salva um playback a partir de um link colado.
+      - link do YouTube  -> extrai o id e reusa o fluxo normal (player local).
+      - outro link       -> guarda a URL e deduplica pela própria URL.
+    """
+    url = (url or "").strip()
+    if not url:
+        raise ValueError("Informe o link.")
+    yid = _extrair_youtube_id(url)
+    if yid:
+        return favoritar(yid, titulo or "Playback (link)", url)
+    # Link não-YouTube: dedup próprio pela URL (o campo youtube_id é único e nulo por vez).
+    titulo = (titulo or "Playback").strip()
+    conn = database.conectar()
+    try:
+        linha = conn.execute(
+            "SELECT id FROM playback WHERE url=? COLLATE NOCASE", (url,)
+        ).fetchone()
+        if linha:
+            conn.execute(
+                "UPDATE playback SET titulo=?, favorito=1 WHERE id=?",
+                (titulo, linha["id"]),
+            )
+        else:
+            conn.execute(
+                "INSERT INTO playback (titulo, youtube_id, url, favorito) "
+                "VALUES (?, NULL, ?, 1)",
+                (titulo, url),
+            )
+        conn.commit()
+        row = conn.execute(
+            "SELECT id, titulo, youtube_id, url, favorito FROM playback "
+            "WHERE url=? COLLATE NOCASE",
+            (url,),
+        ).fetchone()
+        return {
+            "id": row["id"],
+            "titulo": row["titulo"],
+            "youtube_id": row["youtube_id"],
+            "url": row["url"],
+            "favorito": row["favorito"],
+        }
+    finally:
+        conn.close()
+
+
 def desfavoritar(youtube_id: str) -> bool:
     conn = database.conectar()
     try:
         cur = conn.execute("DELETE FROM playback WHERE youtube_id=?", (youtube_id,))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def remover_por_id(playback_id: int) -> bool:
+    """Remove um playback pelo id (funciona também p/ links não-YouTube)."""
+    conn = database.conectar()
+    try:
+        cur = conn.execute("DELETE FROM playback WHERE id=?", (playback_id,))
         conn.commit()
         return cur.rowcount > 0
     finally:

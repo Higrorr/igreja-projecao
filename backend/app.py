@@ -149,6 +149,28 @@ def youtube_desfavoritar():
     return jsonify({"ok": True})
 
 
+@app.route("/api/youtube/salvar_link", methods=["POST"])
+def youtube_salvar_link():
+    """Salva um playback colando um link (YouTube ou outro)."""
+    dados = request.get_json(silent=True) or {}
+    url = dados.get("url")
+    titulo = dados.get("titulo") or ""
+    if not url:
+        return jsonify({"erro": "Informe o link."}), 400
+    try:
+        return jsonify(yt.salvar_por_url(url, titulo)), 201
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+
+
+@app.route("/api/playback/<int:playback_id>", methods=["DELETE"])
+def playback_remover(playback_id):
+    """Remove um playback (YouTube ou link) pelo id."""
+    if not yt.remover_por_id(playback_id):
+        return jsonify({"erro": "Playback não encontrado."}), 404
+    return jsonify({"ok": True})
+
+
 @app.route("/api/youtube/abrir", methods=["POST"])
 def youtube_abrir():
     """Abre o vídeo no navegador da máquina (projeção)."""

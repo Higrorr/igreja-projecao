@@ -89,6 +89,20 @@
         </div>
       </section>
 
+      <section class="salvos colapsavel colapsavel-aberto" id="sec-link">
+        <h2 class="grupo-titulo colapsavel-titulo" tabindex="0" role="button"
+            aria-expanded="true">Salvar por link <span class="colapsavel-seta" aria-hidden="true">▾</span></h2>
+        <div class="colapsavel-conteudo">
+          <p class="dica">Cole o link do vídeo para salvar como playback (YouTube ou outro).</p>
+          <form id="form-link" class="form-linha" autocomplete="off">
+            <input id="campo-link" class="campo" type="url" inputmode="url"
+                  placeholder="https://youtu.be/… ou https://…"
+                  aria-label="Link do playback para salvar">
+            <button class="botao" type="submit">Salvar</button>
+          </form>
+        </div>
+      </section>
+
       <div class="yt-bar">
         <span class="dica-chip chip-toggle ativo" data-t="playback">Playback</span>
         <span class="dica-chip chip-toggle ativo" data-t="instrumental">instrumental</span>
@@ -116,6 +130,25 @@
       <div id="agenda-vazio" class="vazio">Nenhuma pessoa na agenda ainda.</div>
     </div>
   </main>
+
+  <div id="modal-preview" class="modal-preview" hidden>
+    <div class="modal-preview-fundo" data-fechar-preview></div>
+    <div class="modal-preview-caixa" role="dialog" aria-modal="true" aria-label="Prévia do playback">
+      <div class="modal-preview-topo">
+        <span id="preview-titulo" class="modal-preview-titulo"></span>
+        <button type="button" class="modal-preview-fechar" data-fechar-preview
+                aria-label="Fechar prévia">✕</button>
+      </div>
+      <div class="modal-preview-ratio">
+        <iframe id="preview-iframe" title="Prévia"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen></iframe>
+      </div>
+      <div class="modal-preview-acoes">
+        <button type="button" class="botao" id="btn-preview-projetar">► Projetar</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="controle-remoto" role="toolbar" aria-label="Controle da projeção">
     <button type="button" class="controle-btn" id="btn-slide-ant" title="Voltar slide" aria-label="Voltar slide"><span class="seta">‹</span><span class="rotulo">Voltar</span></button>
