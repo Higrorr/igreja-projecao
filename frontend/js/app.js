@@ -793,7 +793,6 @@
         removerFicha(f.id);
       });
 
-      acoes.appendChild(tocar);
       acoes.appendChild(addItem);
       acoes.appendChild(remover);
 
