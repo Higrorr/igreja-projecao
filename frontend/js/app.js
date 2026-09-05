@@ -20,23 +20,19 @@
   const carregando = document.getElementById("carregando");
   const toast = document.getElementById("toast");
   const status = document.getElementById("status");
-  const contagem = document.getElementById("contagem");
   const btnAtualizar = document.getElementById("btn-atualizar");
 
   const listaPlay = document.getElementById("lista-play");
   const playVazio = document.getElementById("play-vazio");
-  const playBadge = document.getElementById("play-badge");
 
   const listaCanais = document.getElementById("lista-canais");
   const canaisVazio = document.getElementById("canais-vazio");
-  const canaisBadge = document.getElementById("canais-badge");
   const formCanal = document.getElementById("form-canal");
   const campoCanal = document.getElementById("campo-canal");
   const formLink = document.getElementById("form-link");
   const campoLink = document.getElementById("campo-link");
 
   const chips = document.querySelectorAll(".chip-toggle");
-  const btnBuscarYt = document.getElementById("btn-buscar-yt");
   const ytSection = document.getElementById("yt");
   const ytLista = document.getElementById("yt-lista");
   const ytVazio = document.getElementById("yt-vazio");
@@ -78,18 +74,6 @@
     if (toast) toast.hidden = true;
   }
 
-  function etiquetaTexto(tipo) {
-    if (tipo === "biblia") return "Bíblia";
-    if (tipo === "harpa") return "Harpa";
-    return "Playback";
-  }
-
-  function etiquetaClasse(tipo) {
-    if (tipo === "biblia") return "et-biblia";
-    if (tipo === "harpa") return "et-harpa";
-    return "et-play";
-  }
-
   /* ---------- abas ---------- */
   function ativarAba(aba) {
     abaAtiva = aba;
@@ -98,12 +82,6 @@
       tabsBtns[k].classList.toggle("ativa", k === aba);
       tabsBtns[k].setAttribute("aria-selected", k === aba ? "true" : "false");
     });
-    campo.placeholder =
-      aba === "acervo"
-        ? "Bíblia ou hino (ex.: Salmos 23)"
-        : aba === "agenda"
-          ? "…"
-          : "Buscar música no YouTube…";
 
     if (aba === "play") { carregarPlaybacks(); }
     if (aba === "agenda") { carregarAgenda(); }
@@ -162,30 +140,22 @@
     b.type = "button";
     b.className = "card";
 
-    const et = document.createElement("span");
-    et.className = "card-etiqueta " + etiquetaClasse(grupo);
-    et.textContent = etiquetaTexto(grupo);
-
     const p = document.createElement("span");
     p.className = "card-principal";
 
-    const s = document.createElement("span");
-    s.className = "card-secundario";
-
     if (grupo === "biblia") {
       p.textContent = item.livro_exibicao + " " + item.capitulo;
-      s.textContent = item.arquivo.replace(/\.pptx$/i, "");
     } else if (grupo === "harpa") {
       p.textContent = "Harpa " + item.numero;
+      const s = document.createElement("span");
+      s.className = "card-secundario";
       s.textContent = item.titulo || item.arquivo.replace(/\.pptx$/i, "");
+      b.appendChild(s);
     } else {
       p.textContent = item.titulo;
-      s.textContent = item.url || ("Playback " + item.id);
     }
 
-    b.appendChild(et);
     b.appendChild(p);
-    b.appendChild(s);
     b.addEventListener("click", function () { projetar(grupo, item.id); });
     return b;
   }
@@ -198,10 +168,6 @@
     const titulo = document.createElement("h2");
     titulo.className = "grupo-titulo";
     titulo.textContent = nomes[grupo];
-    const badge = document.createElement("span");
-    badge.className = "grupo-badge";
-    badge.textContent = "(" + itens.length + ")";
-    titulo.appendChild(badge);
 
     const lista = document.createElement("div");
     lista.className = "item-lista";
@@ -223,10 +189,9 @@
     });
     vazio.hidden = algum || ultimaQuery !== "";
     if (!algum && ultimaQuery !== "") {
-      vazio.textContent = "";
+      vazio.innerHTML = "";
       const p = document.createElement("p");
-      p.textContent = "Nada encontrado para \u201c" + ultimaQuery +
-        "\u201d. Tente na aba Playbacks para buscar no YouTube.";
+      p.textContent = "Nada para \u201c" + ultimaQuery + "\u201d";
       vazio.appendChild(p);
       vazio.hidden = false;
     }
@@ -237,11 +202,7 @@
     ultimaQuery = q.trim();
     if (!ultimaQuery) {
       resultados.textContent = "";
-      vazio.hidden = false;
-      vazio.textContent = "";
-      const p = document.createElement("p");
-      p.textContent = "Digite para buscar um capítulo ou hino.";
-      vazio.appendChild(p);
+      vazio.hidden = true;
       return;
     }
     carregando.hidden = false;
@@ -286,15 +247,6 @@
     buscar(campo.value);
   });
 
-  document.querySelectorAll(".dica-chip:not(.chip-toggle)").forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      campo.value = chip.dataset.sugestao;
-      ativarAba("acervo");
-      buscarLocal(campo.value);
-      campo.focus();
-    });
-  });
-
   /* ---------- YouTube (pesquisa ao vivo + cache) ---------- */
   function paramsYoutube(termo, forcar) {
     const p = new URLSearchParams({ q: termo });
@@ -324,7 +276,7 @@
     ytFonte.textContent = "";
 
     if (dados.erro) {
-      ytVazio.textContent = "⚠ " + dados.erro;
+      ytVazio.textContent = dados.erro;
       ytVazio.hidden = false;
       return;
     }
@@ -359,25 +311,9 @@
       const canal = document.createElement("span");
       canal.className = "yt-canal";
       canal.textContent = v.canal;
-      if (v.prioridade) {
-        const pri = document.createElement("span");
-        pri.className = "yt-pri";
-        pri.textContent = "★ priorizado";
-        canal.appendChild(pri);
-      }
-
-      const tags = document.createElement("span");
-      tags.className = "yt-tags";
-      (v.tags || []).forEach(function (t) {
-        const b = document.createElement("span");
-        b.className = "yt-tag";
-        b.textContent = t;
-        tags.appendChild(b);
-      });
 
       info.appendChild(titulo);
       info.appendChild(canal);
-      info.appendChild(tags);
 
       const acoes = document.createElement("div");
       acoes.className = "yt-acoes";
@@ -385,13 +321,13 @@
       const abrir = document.createElement("button");
       abrir.type = "button";
       abrir.className = "botao botao-acao";
-      abrir.textContent = "▶ ABRIR";
+      abrir.textContent = "Abrir";
       abrir.addEventListener("click", function () { abrirYoutube(v); });
 
       const fav = document.createElement("button");
       fav.type = "button";
       fav.className = "botao botao-secundario" + (v.favorito ? " yt-fav-salvo" : "");
-      fav.textContent = v.favorito ? "⭐ Salvo" : "☆ Salvar";
+      fav.textContent = v.favorito ? "Salvo" : "Salvar";
       fav.addEventListener("click", function () {
         alternarFavorito(v, fav);
       });
@@ -403,8 +339,7 @@
         const pri = document.createElement("button");
         pri.type = "button";
         pri.className = "botao botao-secundario";
-        pri.textContent = "★ Priorizar";
-        pri.title = "Colocar este canal no topo da busca";
+        pri.textContent = "Priorizar";
         pri.addEventListener("click", function () {
           priorizarCanal(v.canal || "", v.channel_id || null, pri);
         });
@@ -454,7 +389,7 @@
           return;
         }
         v.favorito = !v.favorito;
-        btn.textContent = v.favorito ? "⭐ Salvo" : "☆ Salvar";
+        btn.textContent = v.favorito ? "Salvo" : "Salvar";
         btn.classList.toggle("yt-fav-salvo", v.favorito);
         mostrarToast(v.favorito ? "Salvo nos playbacks ✓" : "Removido ✓", "ok");
         carregarPlaybacks();
@@ -475,19 +410,6 @@
         buscarYoutube(atual, true);
       }
     });
-  });
-
-  btnBuscarYt.addEventListener("click", function () {
-    const atual = campo.value.trim();
-    if (!atual) {
-      mostrarToast("Digite o nome da música antes.", "erro");
-      campo.focus();
-      return;
-    }
-    ytVazio.textContent = "Buscando…";
-    ytVazio.hidden = false;
-    ytLista.textContent = "";
-    buscarYoutube(atual, true);
   });
 
   /* ---------- projeção local ---------- */
@@ -516,71 +438,70 @@
   /* ---------- playbacks salvos (favoritos) ---------- */
   function renderizarPlaybacks(lista) {
     listaPlay.textContent = "";
-    playBadge.textContent = "(" + lista.length + ")";
     playVazio.hidden = lista.length !== 0;
+    if (playVazio && !lista.length) playVazio.textContent = "Nenhum";
 
     lista.forEach(function (p) {
       const linha = document.createElement("div");
       linha.className = "play-item";
 
-      const fav = document.createElement("button");
-      fav.type = "button";
-      fav.className = "play-fav ativo";
-      fav.textContent = "⭐";
-      fav.title = "Remover dos salvos";
-      fav.addEventListener("click", function () {
-        removerFavoritoPlay(p.id);
-      });
-
-      const info = document.createElement("div");
-      info.className = "play-info";
+      const info = document.createElement("button");
+      info.type = "button";
+      info.className = "play-info play-abrir";
+      info.title = "Projetar";
       const nome = document.createElement("span");
       nome.className = "play-nome";
       nome.textContent = p.titulo;
-      const url = document.createElement("span");
-      url.className = "play-url";
-      url.textContent = p.url || ("youtu.be/" + p.youtube_id);
       info.appendChild(nome);
-      info.appendChild(url);
+      info.addEventListener("click", function () { projetar("playback", p.id); });
 
-      const ver = document.createElement("button");
-      ver.type = "button";
-      ver.className = "play-ver";
-      ver.textContent = "👁";
-      ver.title = "Ver/ouvir no celular antes de projetar";
-      ver.addEventListener("click", function () { abrirPreview(p); });
+      const menu = document.createElement("button");
+      menu.type = "button";
+      menu.className = "play-menu";
+      menu.textContent = "⋮";
+      menu.title = "Opções";
+      menu.addEventListener("click", function () { abrirMenuPlay(p, menu); });
 
-      const editarNome = document.createElement("button");
-      editarNome.type = "button";
-      editarNome.className = "play-edit";
-      editarNome.textContent = "✏️";
-      editarNome.title = "Renomear playback";
-      editarNome.addEventListener("click", function () { renomearPlayback(p); });
-
-      const tocar = document.createElement("button");
-      tocar.type = "button";
-      tocar.className = "play-tocar";
-      tocar.textContent = "►";
-      tocar.title = "Abrir no navegador";
-      tocar.addEventListener("click", function () { projetar("playback", p.id); });
-
-      const remover = document.createElement("button");
-      remover.type = "button";
-      remover.className = "play-remover";
-      remover.textContent = "✕";
-      remover.title = "Remover dos salvos";
-      remover.addEventListener("click", function () {
-        removerFavoritoPlay(p.id);
-      });
-
-      linha.appendChild(fav);
       linha.appendChild(info);
-      linha.appendChild(editarNome);
-      linha.appendChild(ver);
-      linha.appendChild(tocar);
-      linha.appendChild(remover);
+      linha.appendChild(menu);
       listaPlay.appendChild(linha);
     });
+  }
+
+  function abrirMenuPlay(p, btn) {
+    fecharMenuPlay();
+    const menu = document.createElement("div");
+    menu.className = "play-menu-pop";
+    [
+      { rotulo: "Ver", fn: function () { abrirPreview(p); } },
+      { rotulo: "Renomear", fn: function () { renomearPlayback(p); } },
+      { rotulo: "Remover", perigo: true, fn: function () { removerFavoritoPlay(p.id); } },
+    ].forEach(function (it) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = it.rotulo;
+      if (it.perigo) b.className = "play-menu-perigo";
+      b.addEventListener("click", function () {
+        fecharMenuPlay();
+        it.fn();
+      });
+      menu.appendChild(b);
+    });
+    const r = btn.getBoundingClientRect();
+    menu.style.left = Math.min(r.right - 140, window.innerWidth - 160) + "px";
+    menu.style.top = Math.max(10, r.bottom - 4) + "px";
+    document.body.appendChild(menu);
+    document.addEventListener("pointerdown", fecharMenuPlayFora, true);
+  }
+
+  function fecharMenuPlayFora(e) {
+    if (!e.target.closest(".play-menu-pop")) fecharMenuPlay();
+  }
+
+  function fecharMenuPlay() {
+    const m = document.querySelector(".play-menu-pop");
+    if (m) m.remove();
+    document.removeEventListener("pointerdown", fecharMenuPlayFora, true);
   }
 
   function carregarPlaybacks() {
@@ -678,8 +599,8 @@
   /* ---------- canais priorizados ---------- */
   function renderizarCanais(lista) {
     listaCanais.textContent = "";
-    canaisBadge.textContent = "(" + lista.length + ")";
     canaisVazio.hidden = lista.length !== 0;
+    if (canaisVazio && !lista.length) canaisVazio.textContent = "Nenhum";
 
     lista.forEach(function (c) {
       const linha = document.createElement("div");
@@ -820,13 +741,14 @@
   const formAgenda = document.getElementById("form-agenda");
   const campoNome = document.getElementById("campo-nome");
 
-  // Galeria de busca por item, aberta ao tocar em "➕ Item" de uma ficha.
+  // Galeria de busca por item, aberta ao tocar em "Item" de uma ficha.
   let buscaItemAberta = null;  // id da ficha em edição de item, ou null
   let buscaItemTimer = null;
 
   function renderizarAgenda(lista) {
     agendaLista.textContent = "";
     agendaVazio.hidden = lista.length !== 0;
+    if (agendaVazio && !lista.length) agendaVazio.textContent = "Nenhum";
 
     lista.forEach(function (f) {
       const card = document.createElement("div");
@@ -839,7 +761,7 @@
       nome.textContent = f.nome;
       const item = document.createElement("span");
       item.className = "play-url" + (f.texto ? "" : " suave");
-      item.textContent = f.texto || "Sem item — toque em ➕";
+      item.textContent = f.texto || "Sem item";
       infos.appendChild(nome);
       infos.appendChild(item);
       infos.addEventListener("click", function () {
@@ -853,23 +775,10 @@
       const acoes = document.createElement("div");
       acoes.className = "agenda-acoes";
 
-      const tocar = document.createElement("button");
-      tocar.type = "button";
-      tocar.className = "botao botao-acao";
-      tocar.textContent = "▶";
-      tocar.title = "Reproduzir";
-      tocar.addEventListener("click", function () {
-        if (f.tipo && f.ref_id != null) {
-          projetarFicha(f.id, f.nome);
-        } else {
-          abrirBuscaItem(f);
-        }
-      });
-
       const addItem = document.createElement("button");
       addItem.type = "button";
       addItem.className = "botao botao-secundario";
-      addItem.textContent = f.tipo ? "🔄 Item" : "➕";
+      addItem.textContent = "Item";
       addItem.title = "Escolher/adicionar o item";
       addItem.addEventListener("click", function () {
         abrirBuscaItem(f);
@@ -899,7 +808,7 @@
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "botao botao-secundario agenda-desvincula";
-        remove.textContent = "remover item";
+        remove.textContent = "Remover item";
         remove.addEventListener("click", function () {
           if (confirm("Remover o item de " + f.nome + "?")) {
             setItemFicha(f.id, null, null, "");
@@ -920,7 +829,7 @@
     const input = document.createElement("input");
     input.className = "campo";
     input.type = "search";
-    input.placeholder = "Buscar hino, bíblia ou playback salvo…";
+    input.placeholder = "Buscar…";
     input.autocomplete = "off";
     caixa.appendChild(input);
 
@@ -965,13 +874,9 @@
             const b = document.createElement("button");
             b.type = "button";
             b.className = "card";
-            const et = document.createElement("span");
-            et.className = "card-etiqueta " + etiquetaClasse(it.tipo);
-            et.textContent = etiquetaTexto(it.tipo);
             const p = document.createElement("span");
             p.className = "card-principal";
             p.textContent = it.rotulo;
-            b.appendChild(et);
             b.appendChild(p);
             b.addEventListener("click", function () {
               setItemFicha(f.id, it.tipo, it.ref_id, it.rotulo);
@@ -1097,8 +1002,7 @@
   function carregarStatus() {
     fetch("/api/status")
       .then(function (r) { return r.json(); })
-      .then(function (d) {
-        contagem.textContent = "📖 " + d.biblia + " · 🎵 " + d.harpa;
+      .then(function () {
         status.hidden = false;
       })
       .catch(function () {
@@ -1108,7 +1012,7 @@
 
   btnAtualizar.addEventListener("click", function () {
     btnAtualizar.disabled = true;
-    btnAtualizar.textContent = "🔄 Escaneando…";
+    btnAtualizar.textContent = "Escaneando…";
     fetch("/api/atualizar", { method: "POST" })
       .then(function (r) { return r.json(); })
       .then(function () {
@@ -1120,18 +1024,16 @@
       })
       .finally(function () {
         btnAtualizar.disabled = false;
-        btnAtualizar.textContent = "🔄 Atualizar";
+        btnAtualizar.textContent = "Atualizar";
       });
   });
 
   /* ---------- controle remoto (tela preta / slides / play-pause) ---------- */
   (function () {
     var btnPreto = document.getElementById("btn-tela-preta");
-    var iconePreto = document.getElementById("icone-preto");
     var btnProx = document.getElementById("btn-slide-prox");
     var btnAnt = document.getElementById("btn-slide-ant");
     var btnPause = document.getElementById("btn-player-pause");
-    var iconePause = document.getElementById("icone-pause");
     var btnRecomecar = document.getElementById("btn-player-recomecar");
     var btnPrimeiroPlano = document.getElementById("btn-primeiro-plano");
 
@@ -1152,10 +1054,8 @@
     function marcarPreto(estaPreto) {
       if (estaPreto) {
         btnPreto.classList.add("preto-ativo");
-        if (iconePreto) iconePreto.textContent = "◼";
       } else {
         btnPreto.classList.remove("preto-ativo");
-        if (iconePreto) iconePreto.textContent = "⬛";
       }
     }
 
@@ -1215,7 +1115,7 @@
   })();
 
   /* ---------- início ---------- */
-  vazio.hidden = false;
+  vazio.hidden = true;
   carregarStatus();
   carregarPlaybacks();
   carregarCanais();
