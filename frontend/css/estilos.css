@@ -627,7 +627,8 @@ body { padding-bottom: 78px; }
 }
 
 /* -------- Prévia do playback (modal) -------- */
-.play-ver {
+.play-ver,
+.play-edit {
   appearance: none;
   border: 1px solid var(--borda);
   background: var(--superficie);
@@ -641,7 +642,8 @@ body { padding-bottom: 78px; }
   cursor: pointer;
   touch-action: manipulation;
 }
-.play-ver:active { transform: scale(0.95); }
+.play-ver:active,
+.play-edit:active { transform: scale(0.95); }
 
 .modal-preview {
   position: fixed;

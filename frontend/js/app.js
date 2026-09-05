@@ -550,6 +550,13 @@
       ver.title = "Ver/ouvir no celular antes de projetar";
       ver.addEventListener("click", function () { abrirPreview(p); });
 
+      const editarNome = document.createElement("button");
+      editarNome.type = "button";
+      editarNome.className = "play-edit";
+      editarNome.textContent = "✏️";
+      editarNome.title = "Renomear playback";
+      editarNome.addEventListener("click", function () { renomearPlayback(p); });
+
       const tocar = document.createElement("button");
       tocar.type = "button";
       tocar.className = "play-tocar";
@@ -568,6 +575,7 @@
 
       linha.appendChild(fav);
       linha.appendChild(info);
+      linha.appendChild(editarNome);
       linha.appendChild(ver);
       linha.appendChild(tocar);
       linha.appendChild(remover);
@@ -599,6 +607,28 @@
       .catch(function () {
         mostrarToast("Falha ao remover.", "erro");
       });
+  }
+
+  function renomearPlayback(p) {
+    const novo = prompt("Novo nome do playback:", p.titulo || "");
+    if (novo === null) return; // cancelado
+    const nome = novo.trim();
+    if (!nome || nome === (p.titulo || "").trim()) return;
+    fetch("/api/playback/" + p.id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo: nome }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.id) {
+          mostrarToast("Renomeado ✓", "ok");
+          carregarPlaybacks();
+        } else {
+          mostrarToast(d.erro || "Falha ao renomear.", "erro");
+        }
+      })
+      .catch(function () { mostrarToast("Falha ao renomear.", "erro"); });
   }
 
   /* ---------- prévia do playback no celular ---------- */

@@ -507,6 +507,34 @@ def remover_por_id(playback_id: int) -> bool:
         conn.close()
 
 
+def renomear(playback_id: int, titulo: str) -> dict:
+    """Renomeia um playback salvo. Devolve a linha atualizada."""
+    titulo = (titulo or "").strip()
+    if not titulo:
+        raise ValueError("Informe um nome.")
+    conn = database.conectar()
+    try:
+        cur = conn.execute(
+            "UPDATE playback SET titulo=? WHERE id=?", (titulo, playback_id)
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            raise KeyError("Playback não encontrado.")
+        row = conn.execute(
+            "SELECT id, titulo, youtube_id, url, favorito FROM playback WHERE id=?",
+            (playback_id,),
+        ).fetchone()
+        return {
+            "id": row["id"],
+            "titulo": row["titulo"],
+            "youtube_id": row["youtube_id"],
+            "url": row["url"],
+            "favorito": row["favorito"],
+        }
+    finally:
+        conn.close()
+
+
 def listar_favoritos() -> list:
     conn = database.conectar()
     try:

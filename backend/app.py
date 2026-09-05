@@ -171,6 +171,18 @@ def playback_remover(playback_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/playback/<int:playback_id>", methods=["PUT"])
+def playback_renomear(playback_id):
+    """Renomeia um playback salvo (passa a ser pesquisável pelo novo nome)."""
+    dados = request.get_json(silent=True) or {}
+    try:
+        return jsonify(yt.renomear(playback_id, dados.get("titulo") or ""))
+    except KeyError:
+        return jsonify({"erro": "Playback não encontrado."}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+
+
 @app.route("/api/youtube/abrir", methods=["POST"])
 def youtube_abrir():
     """Abre o vídeo no navegador da máquina (projeção)."""
